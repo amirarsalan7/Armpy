@@ -1,0 +1,50 @@
+main.py
+   │
+   ▼
+Controller
+   │
+   ▼
+RobotArm
+   │
+   ├── Joint
+   │    └── Motor
+   │
+   ├── Joint
+   │    └── Motor
+   │
+   └── Joint
+        └── Motor
+
+
+
+
+
+ main.py
+│
+│
+│  robot = RobotArm()
+│
+▼
+RobotArm Object
+│
+├───────────────┐
+│               │
+▼               ▼
+Shoulder       Elbow
+Joint Object   Joint Object
+│               │
+▼               ▼
+position=30    position=60
+
+
+
+Application
+     │
+     ▼
+Robot
+     │
+     ▼
+Joint
+
+
+
