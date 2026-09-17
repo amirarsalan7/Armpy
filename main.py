@@ -1,25 +1,40 @@
-from robot import RobotArm
-from joint import Joint
+from dynamixel_connection import DynamixelConnection
 
 
-robot = RobotArm()
+connection = DynamixelConnection()
 
 
-print("Number of joints:")
-print(Joint.joint_count)
+if connection.open():
 
+    try:
 
-robot.show_status()
+        if connection.ping(connection.CM550_ID):
 
+            dxl_power = connection.read_1byte(
+                connection.CM550_ID,
+                connection.ADDR_DXL_POWER
+            )
 
-print("\nMoving robot...\n")
+            print(f"DYNAMIXEL power state: {dxl_power}")
 
+            if dxl_power == 1:
 
-robot.move_shoulder(30)
-robot.move_elbow(60)
-robot.move_wrist(-20)
+                motor_count = connection.scan_dynamixels()
 
+                if motor_count == 7:
+                    print(
+                        "All 7 DYNAMIXEL motors were detected."
+                    )
 
-print("\nNew robot status:")
+                elif motor_count is not None:
+                    print(
+                        f"Expected 7 motors, "
+                        f"but detected {motor_count}."
+                    )
 
-robot.show_status()
+            else:
+                print("DYNAMIXEL power is OFF.")
+
+    finally:
+
+        connection.close()
