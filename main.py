@@ -1,4 +1,5 @@
 from dynamixel_connection import DynamixelConnection
+from dynamixel_motor import DynamixelMotor
 
 EXPECTED_MOTOR_COUNT = 7
 
@@ -39,13 +40,13 @@ if connection.open():
 
                 if access_ready:
 
-                    motors = (
+                    discovered_motors = (
                         connection.discover_dynamixels()
                     )
 
                     print("\nDiscovered motors:")
 
-                    for motor_id,info in motors.items():
+                    for motor_id,info in discovered_motors.items():
                         print(
                             f"ID {motor_id}:",
                             f"Model={info['model_number']}"
@@ -54,10 +55,10 @@ if connection.open():
 
                     print(
                         f"\nBroadcast discovery count: "
-                        f"{len(motors)}"
+                        f"{len(discovered_motors)}"
                     )
 
-                    if len(motors)==EXPECTED_MOTOR_COUNT:
+                    if len(discovered_motors)==EXPECTED_MOTOR_COUNT:
                         print(
                             "All expected motors"
                             "were discovered"
@@ -67,9 +68,78 @@ if connection.open():
                             f"Expected"
                             f"{EXPECTED_MOTOR_COUNT}motors,"
                             f"but discovered"
-                            f"{len(motors)}."
+                            f"{len(discovered_motors)}."
                         )
 
+                    motor_objects = {}
+
+                    for motor_id,info in discovered_motors.items():
+                        motor = DynamixelMotor(
+                            connection=connection,
+                            motor_id = motor_id,
+                            model_number=info["model_number"],
+                            firmware_version=info["firmware_version"]
+                        )
+                        motor_objects[motor_id] = motor
+
+
+                    print("\nMotor objects created.")
+
+                    for motor_id, motor in motor_objects.items():
+
+                        status = motor.read_status()
+
+                        print(
+                            f"\nMotor {motor_id}"
+                        )
+
+                        print(
+                            f"  Model: "
+                            f"{status['model_name']} "
+                            f"({status['model_number']})"
+                        )
+
+                        print(
+                            f"  Firmware: "
+                            f"{status['firmware_version']}"
+                        )
+
+                        print(
+                            f"  Torque: "
+                            f"{status['torque_enabled']}"
+                        )
+
+                        print(
+                            f"  Position raw: "
+                            f"{status['position_raw']}"
+                        )
+
+                        print(
+                            f"  Position deg: "
+                            f"{status['position_deg']:.2f}"
+                        )
+
+                        print(
+                            f"  Voltage: "
+                            f"{status['voltage']} V"
+                        )
+
+                        print(
+                            f"  Temperature: "
+                            f"{status['temperature']} C"
+                        )
+
+                        print(
+                            f"  Hardware error: "
+                            f"{status['hardware_error']}"
+                        )
+
+    except ValueError as error:
+
+        print(
+            f"Motor configuration error:{error}"
+        )
+    
     finally:
 
         connection.close()

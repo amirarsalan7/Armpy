@@ -109,6 +109,63 @@ class DynamixelConnection:
 
         return value
 
+    def read_2byte(self,device_id,address):
+
+        value,comm_result,device_error =(
+            self.packet_handler.read2ByteTxRx(
+                self.port_handler,
+                device_id,
+                address
+            )
+        )
+        if comm_result != COMM_SUCCESS:
+            print(
+                "COMMUNICATION ERROR:",
+                self.packet_handler.getTxRxResult(
+                    comm_result
+                )
+            )
+            return None
+        if device_error != 0:
+            print(
+                "DEVICE ERROR:",
+                self.packet_handler.getRxPacketError(
+                    device_error
+                )
+            )
+            return None
+        
+        return value
+    
+    def read_4byte(self, device_id, address):
+
+        value, comm_result, device_error = (
+            self.packet_handler.read4ByteTxRx(
+                self.port_handler,
+                device_id,
+                address
+            )
+        )
+
+        if comm_result != COMM_SUCCESS:
+            print(
+                "COMMUNICATION ERROR:",
+                self.packet_handler.getTxRxResult(
+                    comm_result
+                )
+            )
+            return None
+
+        if device_error != 0:
+            print(
+                "DEVICE ERROR:",
+                self.packet_handler.getRxPacketError(
+                    device_error
+                )
+            )
+            return None
+
+        return value
 
     def write_1byte(self, device_id, address, value):
 
