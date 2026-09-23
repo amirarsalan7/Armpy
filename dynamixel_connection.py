@@ -134,6 +134,7 @@ class DynamixelConnection:
                 )
             )
             return None
+            
         
         return value
     
@@ -194,6 +195,37 @@ class DynamixelConnection:
 
         return True
 
+    
+    def write_4byte(self,device_id,address,value):
+
+        comm_result,device_error = (
+            self.packet_handler.write4ByteTxRx(
+                self.port_handler,
+                device_id,
+                address,
+                value
+            )
+        )
+        if comm_result != COMM_SUCCESS:
+            print(
+                "COMMUNICATION ERROR:",
+                self.packet_handler.getTxRxResult(
+                    comm_result
+                )
+
+            )
+            return False
+        if device_error != 0:
+            print(
+                "DEVICE ERROR:",
+                self.packet_handler.getRxPacketError(
+                    device_error
+                )
+            )
+            return False
+        return True
+    
+
     def scan_dynamixels(self):
 
         print("Starting DYNAMIXEL scan . . .")
@@ -208,7 +240,7 @@ class DynamixelConnection:
             print("Could not start DYNAMIXEL scan.")
             return None
 
-        print("Scane command sent.")
+        print("Scan command sent.")
 
         time.sleep(3)
 
