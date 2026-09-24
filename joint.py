@@ -3,7 +3,7 @@ class Joint:
     def __init__(
         self,
         name,
-        motor,
+        motors,
         zero_offset_deg=0.0,
         direction=1,
         gear_ratio=1.0,
@@ -11,7 +11,7 @@ class Joint:
         max_angle_deg=None
     ):
         self.name = name
-        self.motor = motor
+        self.motors = motors
 
         self.zero_offset_deg = zero_offset_deg
         self.direction = direction
@@ -19,6 +19,12 @@ class Joint:
 
         self.min_angle_deg = min_angle_deg
         self.max_angle_deg = max_angle_deg
+
+        if len(self.motors)==0:
+
+            raise ValueError(
+                "Joint must have at least one motor."
+            )
 
         if self.direction not in (-1, 1):
             raise ValueError(
@@ -116,6 +122,27 @@ class Joint:
             )
 
         return True
+
+    def read_motor_angle(self):
+
+        angles=[]
+
+        for motor in self.motors:
+            angle = (
+                motor.read_present_position_degrees()
+            )
+
+            if angle is None:
+                return None
+
+            angle.append(angle)
+
+        average_angle =(
+            sum(angles)
+            /
+            len(angles)
+        )
+        return average_angle
 
     def read_state(self):
 

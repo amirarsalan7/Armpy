@@ -1,0 +1,64 @@
+{
+    "robot_name":"ARMPy_6R",
+        "joints":{
+
+            "joint1":{
+
+                "name":"base_rotation",
+                "motor_ids":[1],
+                "zero_offset_deg":0,
+                "direction":[1],
+                "gear_ratio":1.0,
+                "min_angle_deg":-180,
+                "max_angle_deg":180
+            },
+
+            "joint2":{
+                "name":"shoulder",
+                "motor_ids":[2,3],
+                "zero_offset_deg":0,
+                "direction":[1,-1],
+                "gear_ratio":1.0,
+                "min_angle_deg":-90,
+                "max_angle_deg":90
+            },
+
+            "joint3":{
+                "name":"elbow",
+                "motor_ids":[4],
+                "zero_offset_deg":0,
+                "direction":[1],
+                "gear_ratio":1.0,
+                "min_angle_deg":-90,
+                "max_angle_deg":90
+            },
+            "joint4":{
+                "name":"wrist_pitch",
+                "motor_ids":[5],
+                "zero_offset_deg":0,
+                "direction":[1],
+                "gear_ratio":1.0,
+                "min_angle_deg":-180,
+                "max_angle_deg":180
+            },
+
+            "joint5":{
+                "name":"wrist_rotation",
+                "motor_ids":[6],
+                "zero_offset_deg":0,
+                "direction":[1],
+                "gear_ratio":1.0,
+                "min_angle_deg":-180,
+                "max_angle_deg":180
+            }
+
+        },
+
+        "gripper":{
+                "motor_id":7,
+                "name":"gripper",
+                "open_position":3000,
+                "close_position":1000
+            }
+
+    }
