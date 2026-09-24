@@ -1,0 +1,204 @@
+{
+    "schema_version": 1,
+    "generated_at": "2026-09-24T15:25:15+03:30",
+    "controller": {
+        "type": "CM-550",
+        "device_id": 200,
+        "device_name": "/dev/ttyACM0",
+        "baudrate": 57600,
+        "protocol_version": 2.0,
+        "dxl_power_state": 1,
+        "mode": 2,
+        "bypass_port": 2
+    },
+    "bus": {
+        "scan_count": 7,
+        "broadcast_discovery_count": 7,
+        "expected_motor_count": 7,
+        "count_matches_expected": true
+    },
+    "motors": {
+        "1": {
+            "identity": {
+                "id": 1,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 1995,
+                "position_deg": 175.341796875,
+                "goal_position": 1995,
+                "present_position": 1995,
+                "voltage": 11.700000000000001,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "2": {
+            "identity": {
+                "id": 2,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 3054,
+                "position_deg": 268.41796875,
+                "goal_position": 3054,
+                "present_position": 3054,
+                "voltage": 11.700000000000001,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "3": {
+            "identity": {
+                "id": 3,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 1050,
+                "position_deg": 92.28515625,
+                "goal_position": 1050,
+                "present_position": 1050,
+                "voltage": 11.5,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "4": {
+            "identity": {
+                "id": 4,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 2918,
+                "position_deg": 256.46484375,
+                "goal_position": 2918,
+                "present_position": 2918,
+                "voltage": 11.5,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "5": {
+            "identity": {
+                "id": 5,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 2090,
+                "position_deg": 183.69140625,
+                "goal_position": 2090,
+                "present_position": 2090,
+                "voltage": 11.5,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "6": {
+            "identity": {
+                "id": 6,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 2845,
+                "position_deg": 250.048828125,
+                "goal_position": 2845,
+                "present_position": 2845,
+                "voltage": 11.5,
+                "temperature": 35,
+                "hardware_error": 0
+            }
+        },
+        "7": {
+            "identity": {
+                "id": 7,
+                "model_number": 1060,
+                "model_name": "XL430-W250",
+                "firmware_version": 47
+            },
+            "configuration": {
+                "drive_mode": 0,
+                "operating_mode": 3,
+                "position_limits": {
+                    "min": 0,
+                    "max": 4095
+                }
+            },
+            "snapshot": {
+                "torque_enabled": 0,
+                "position_raw": 2035,
+                "position_deg": 178.857421875,
+                "goal_position": 2036,
+                "present_position": 2036,
+                "voltage": 11.4,
+                "temperature": 36,
+                "hardware_error": 0
+            }
+        }
+    }
+}
