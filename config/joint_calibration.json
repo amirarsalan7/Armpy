@@ -1,0 +1,69 @@
+{
+    "schema_version": 1,
+    "calibrated_at": "2026-09-27T18:10:46+03:30",
+    "source_hardware_inventory": "config/hardware_inventory.json",
+    "joints": {
+        "joint1": {
+            "name": "base_rotation",
+            "motor_ids": [
+                1
+            ],
+            "home_raw": {
+                "1": 1994
+            },
+            "direction_calibrated": false,
+            "limits_calibrated": false
+        },
+        "joint2": {
+            "name": "shoulder",
+            "motor_ids": [
+                2,
+                3
+            ],
+            "home_raw": {
+                "2": 2114,
+                "3": 1981
+            },
+            "direction_calibrated": false,
+            "limits_calibrated": false
+        },
+        "joint3": {
+            "name": "elbow",
+            "motor_ids": [
+                4
+            ],
+            "home_raw": {
+                "4": 2130
+            },
+            "direction_calibrated": false,
+            "limits_calibrated": false
+        },
+        "joint4": {
+            "name": "wrist_pitch",
+            "motor_ids": [
+                5
+            ],
+            "home_raw": {
+                "5": 2047
+            },
+            "direction_calibrated": false,
+            "limits_calibrated": false
+        },
+        "joint5": {
+            "name": "wrist_rotation",
+            "motor_ids": [
+                6
+            ],
+            "home_raw": {
+                "6": 2875
+            },
+            "direction_calibrated": false,
+            "limits_calibrated": false
+        }
+    },
+    "gripper": {
+        "motor_id": 7,
+        "reference_raw": 2330,
+        "open_close_calibration": false
+    }
+}
