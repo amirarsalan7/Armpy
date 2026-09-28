@@ -1,6 +1,6 @@
 {
     "schema_version": 1,
-    "calibrated_at": "2026-09-27T18:10:46+03:30",
+    "calibrated_at": "2026-09-28T15:58:37+03:30",
     "source_hardware_inventory": "config/hardware_inventory.json",
     "joints": {
         "joint1": {
@@ -9,10 +9,24 @@
                 1
             ],
             "home_raw": {
-                "1": 1994
+                "1": 2025
             },
-            "direction_calibrated": false,
-            "limits_calibrated": false
+            "direction_calibrated": true,
+            "limits_calibrated": false,
+            "direction_measuremwnt": {
+                "before_raw": {
+                    "1": 2098
+                },
+                "after_raw": {
+                    "1": 3062
+                },
+                "delta_raaw": {
+                    "1": 964
+                }
+            },
+            "motor_directions": {
+                "1": 1
+            }
         },
         "joint2": {
             "name": "shoulder",
@@ -21,11 +35,29 @@
                 3
             ],
             "home_raw": {
-                "2": 2114,
-                "3": 1981
+                "2": 1542,
+                "3": 2563
             },
-            "direction_calibrated": false,
-            "limits_calibrated": false
+            "direction_calibrated": true,
+            "limits_calibrated": false,
+            "direction_measuremwnt": {
+                "before_raw": {
+                    "2": 1651,
+                    "3": 2451
+                },
+                "after_raw": {
+                    "2": 2682,
+                    "3": 1418
+                },
+                "delta_raaw": {
+                    "2": 1031,
+                    "3": -1033
+                }
+            },
+            "motor_directions": {
+                "2": 1,
+                "3": -1
+            }
         },
         "joint3": {
             "name": "elbow",
@@ -33,10 +65,24 @@
                 4
             ],
             "home_raw": {
-                "4": 2130
+                "4": 2428
             },
-            "direction_calibrated": false,
-            "limits_calibrated": false
+            "direction_calibrated": true,
+            "limits_calibrated": false,
+            "direction_measuremwnt": {
+                "before_raw": {
+                    "4": 1486
+                },
+                "after_raw": {
+                    "4": 2554
+                },
+                "delta_raaw": {
+                    "4": 1068
+                }
+            },
+            "motor_directions": {
+                "4": 1
+            }
         },
         "joint4": {
             "name": "wrist_pitch",
@@ -44,10 +90,24 @@
                 5
             ],
             "home_raw": {
-                "5": 2047
+                "5": 2021
             },
-            "direction_calibrated": false,
-            "limits_calibrated": false
+            "direction_calibrated": true,
+            "limits_calibrated": false,
+            "direction_measuremwnt": {
+                "before_raw": {
+                    "5": 2682
+                },
+                "after_raw": {
+                    "5": 1674
+                },
+                "delta_raaw": {
+                    "5": -1008
+                }
+            },
+            "motor_directions": {
+                "5": -1
+            }
         },
         "joint5": {
             "name": "wrist_rotation",
@@ -55,15 +115,29 @@
                 6
             ],
             "home_raw": {
-                "6": 2875
+                "6": 2849
             },
-            "direction_calibrated": false,
-            "limits_calibrated": false
+            "direction_calibrated": true,
+            "limits_calibrated": false,
+            "direction_measuremwnt": {
+                "before_raw": {
+                    "6": 812
+                },
+                "after_raw": {
+                    "6": 3032
+                },
+                "delta_raaw": {
+                    "6": -1876
+                }
+            },
+            "motor_directions": {
+                "6": -1
+            }
         }
     },
     "gripper": {
         "motor_id": 7,
-        "reference_raw": 2330,
+        "reference_raw": 2362,
         "open_close_calibration": false
     }
 }

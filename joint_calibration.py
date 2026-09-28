@@ -7,17 +7,16 @@ from dynamixel_motor import DynamixelMotor
 
 class JointCalibration:
 
-    def __init__(
-            self,
-            connection,
-            hardware_inventory,
-            robot_config
-     ):
+    POSITION_COUNTS_PER_REV = 4096
+    HALF_POSITION_RANGE = 2048
+
+    def __init__(self,connection,hardware_inventory,robot_config ):
 
         self.connection = connection
 
-        self.hardware_inventory = ( hardware_inventory )
+        self.hardware_inventory = hardware_inventory
         self.robot_config = robot_config
+
         self.motor_objects = {}
         self.calibration = None
 
@@ -31,9 +30,7 @@ class JointCalibration:
         available_motor_ids = set(
             self.hardware_inventory.get_motor_ids() )
 
-        joints = (
-            self.robot_config.get_all_joints()
-        )
+        joints = self.robot_config.get_all_joints()
 
         for(joint_key, joint_data )in joints.items():
 
@@ -81,14 +78,12 @@ class JointCalibration:
 
             self.motor_objects[motor_id] = motor
 
-    def _read_motor_position_raw(
-            self,
-            motor_id
-    ):
+    def _read_motor_position_raw(self,motor_id):
+
         motor = self.motor_objects[motor_id]
 
         status = motor.read_status()
-
+        
         position_raw = (status["position_raw"])
 
         if position_raw is None:
@@ -165,6 +160,129 @@ class JointCalibration:
 
         return self.calibration
 
+    def load(self,file_path):
+
+        path = Path(file_path)
+
+        if not path.exists:
+            raise FileNotFoundError(
+                f"Calibration file not found:{path}")
+
+        with path.open("r",encoding="utf-8")as file:
+            data = json.load(file)
+
+        if "joints" not in data:
+            raise ValueError(
+                "Calibration file does not contain joint data.")
+
+        self.calibration = data
+
+        return self.calibration
+
+    def check_joint_torque_off(self,joint_key):
+
+        joint_data = self.robot_config.get_joint_config(joint_key)
+
+        for motor_id in joint_data["motor_ids"]:
+
+            motor = self.motor_objects[motor_id]
+            torque_enabled = motor.read_torque_enabled()
+
+            if torque_enabled is None:
+                raise RuntimeError(
+                    f"Could not read torque state of Motor {motor_id}."
+                )
+            if torque_enabled != 0:
+                raise RuntimeError(
+                    f"Motor {motor_id} torque is ON."
+                    "Manual direction calibration requires torque OFF."
+                )
+
+        return True
+
+    def read_joint_positions(self,joint_key):
+
+        joint_data = self.robot_config.get_joint_config(joint_key)
+
+        positions = {}
+
+        for motor_id in joint_data["motor_ids"]:
+
+            position = self._read_motor_position_raw(motor_id)
+
+            positions[str(motor_id)] = position
+
+        return positions
+
+    def _calculate_position_delta(self,before,after):
+
+        delta = after - before
+
+        if delta > self.HALF_POSITION_RANGE:
+            delta -= self.POSITION_COUNTS_PER_REV
+
+        elif delta < -self.HALF_POSITION_RANGE:
+            delta += self.POSITION_COUNTS_PER_REV
+
+        return delta
+
+    def calculate_joint_directions(
+            self,
+            before_positions,
+            after_positions,
+            min_movement_counts
+    ):
+        directions = {}
+        deltas = {}
+
+        for motor_id,before in before_positions.items():
+
+            after = after_positions[motor_id]
+
+            delta = self._calculate_position_delta(before,after)
+
+            if abs(delta) < min_movement_counts:
+                raise RuntimeError(
+                    f"Motor {motor_id} moved only {delta} counts."
+                    "Move the joint a little more and try again."
+                )
+
+            if delta > 0:
+                direction = 1
+
+            else:
+                direction = -1
+
+            deltas[motor_id] = delta
+            directions[motor_id] = direction
+
+        return directions,deltas
+
+    def store_joint_direction(
+            self,
+            joint_key,
+            before_positions,
+            after_positions,
+            deltas,
+            directions
+    ):
+        if self.calibration is None:
+            raise RuntimeError(
+                "Load calibration data before direction calibration."
+            )
+
+        joint_data = self.calibration["joints"][joint_key]
+
+        joint_data["direction_measuremwnt"] = {
+            "before_raw":before_positions,
+            "after_raw": after_positions,
+            "delta_raaw":deltas
+        }
+
+        joint_data["motor_directions"]=directions
+        joint_data["direction_calibrated"]=True
+
+
     def save( self,file_path):
         if self.calibration is None:
 
@@ -183,3 +301,5 @@ class JointCalibration:
             json.dump( self.calibration,file,indent=4)
 
         return path
+
+

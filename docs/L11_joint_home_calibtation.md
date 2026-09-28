@@ -1,354 +1,329 @@
-# Lesson 11 - Semi-Automatic Joint Home Calibration
+# Lesson 11 — Semi-Automatic Joint Home Calibration
 
 ## Goal
 
-The goal of this lesson is to begin converting manual robot
-configuration into measured robot calibration data.
+The goal of this lesson is to measure the real HOME encoder position of every robot actuator.
 
-The software validates the known motor-to-joint mapping and records
-the current encoder position of every actuator as the selected HOME
-reference.
+The program does not move the robot.
 
-No motion command is sent to the robot.
+The user places the robot in a HOME pose, then the software reads and stores the current motor positions.
 
+---
 
-# Robot Structure
+# Previous System
 
-The current robot contains five revolute arm joints and one gripper
-actuator.
+Before this lesson:
 
-Joint 1:
-Motor 1
+```text
+Physical Robot
+      ↓
+Hardware Discovery
+      ↓
+hardware_inventory.json
+```
 
-Joint 2:
-Motor 2 + Motor 3
+The software already knows:
 
-Joint 3:
-Motor 4
+- Motor IDs
+- Motor model
+- Firmware
+- Controller information
+- Motor configuration
 
-Joint 4:
-Motor 5
+It also has manual robot mapping:
 
-Joint 5:
-Motor 6
+```text
+Joint 1 → Motor 1
 
-Gripper:
-Motor 7
+Joint 2 → Motor 2 + Motor 3
 
+Joint 3 → Motor 4
 
-Joint 2 is a dual-motor joint.
+Joint 4 → Motor 5
 
+Joint 5 → Motor 6
 
-# What Is Joint Calibration?
+Gripper → Motor 7
+```
 
-Hardware discovery identifies the connected actuators.
+---
 
-Joint calibration identifies how those actuators relate to the
-assembled mechanical robot.
+# What This Lesson Adds
 
-Calibration data can include:
+```text
+Known Joint Mapping
+        ↓
+Validate Hardware
+        ↓
+Read Real Encoder Positions
+        ↓
+Capture HOME
+        ↓
+joint_calibration.json
+```
 
-- Home position
-- Zero reference
-- Motor direction
-- Gear ratio
-- Safe mechanical limits
-- Gripper open position
-- Gripper closed position
+The HOME position is measured from the real robot.
 
+It is not assumed to be exactly `2048`.
 
-Lesson 11 begins with Home / Zero reference capture.
+---
 
+# OOP Concept — Stateful Service Object
 
-# OOP Concept: Stateful Service Object
+`JointCalibration` is a Service Object.
 
-JointCalibration is a service object.
+Its job is to perform calibration operations.
 
-It does not represent a physical joint.
+Before HOME capture:
 
-Instead, it performs a calibration process using other objects.
+```text
+JointCalibration
+└── calibration = None
+```
 
-JointCalibration collaborates with:
+After HOME capture:
 
-- DynamixelConnection
-- HardwareInventory
-- RobotConfig
-- DynamixelMotor
+```text
+JointCalibration
+└── calibration = measured data
+```
 
+The object changes state during its lifetime.
 
-The object also contains state.
-
-Before capture:
-
-calibration = None
-
-After capture:
-
-calibration = measured calibration data
-
-
-# Separation of Responsibilities
-
-Joint is a robot domain object.
-
-JointCalibration is a setup and measurement service.
-
-Joint should eventually represent:
-
-- Joint angle
-- Motor references
-- Mechanical limits
-- Coordinate conversion
-
-JointCalibration is responsible for:
-
-- Validating configuration
-- Reading calibration measurements
-- Organizing calibration data
-- Saving calibration data
-
+---
 
 # Dependency Injection
 
-JointCalibration receives its dependencies from outside.
+`JointCalibration` receives:
 
-Example:
-
-JointCalibration(
-    connection,
-    hardware_inventory,
-    robot_config
-)
-
-It does not create a new connection internally.
-
-This allows existing application objects to collaborate without
-duplicating hardware resources.
-
-
-# Mapping Validation
-
-Before calibration, the configured mapping is compared with the
-hardware inventory.
-
-Example:
-
-robot_joints.json:
-
-Joint 3 -> Motor 4
-
-hardware_inventory.json:
-
-Motor 4 exists
-
-Result:
-
-Mapping valid
-
-
-If a configured motor does not exist in the hardware inventory,
-calibration stops with an error.
-
-
-# Building Motor Objects From Inventory
-
-Lesson 10 generated persistent hardware identity information.
-
-JointCalibration reuses this information.
-
-hardware_inventory.json
-
-↓
-
+```text
+Connection
 HardwareInventory
+RobotConfig
+```
 
-↓
+from outside.
 
-stored Motor ID / Model / Firmware
+```text
+HardwareInventory ───┐
+                     │
+RobotConfig ─────────┼──→ JointCalibration
+                     │
+Connection ──────────┘
+```
 
-↓
+It does not create a second hardware connection.
 
-DynamixelMotor objects
+---
 
+# Object Invariant
 
-This avoids repeating full hardware discovery simply to reconstruct
-motor objects.
+When a `JointCalibration` object is created:
 
+```text
+Validate mapping
+      ↓
+Build motor objects
+      ↓
+Object is ready
+```
 
-# Home Position
+If a configured motor does not exist in the Hardware Inventory, object creation stops with an error.
 
-Home is a reference pose selected for the robot.
+---
 
-For each actuator the current raw encoder position is recorded.
+# Main Methods
 
-Example:
+## `_validate_mapping()`
 
-Joint 1:
+Checks:
 
-Motor 1 home = 2046
+```text
+robot_joints.json
+        ↓
+motor IDs
+        ↓
+hardware_inventory.json
+```
 
+Every configured motor must exist.
 
-Dual-motor Joint 2:
+---
 
-Motor 2 home = 2039
+## `_build_motor_objects()`
 
-Motor 3 home = 2055
+Uses stored hardware identity:
 
+```text
+Motor ID
+Model Number
+Firmware
+```
 
-Each motor receives its own measured reference.
+to recreate live `DynamixelMotor` objects.
 
-A dual-motor joint therefore does not use one shared raw zero value.
+---
 
+## `_read_motor_position_raw()`
 
-# Why Raw Counts Are Stored
+```text
+Motor ID
+   ↓
+DynamixelMotor
+   ↓
+read_status()
+   ↓
+position_raw
+```
 
-The calibration system stores measured encoder counts instead of
-inventing a mechanical angle.
+Returns the current raw encoder position.
 
-Measured value:
+---
 
-home_raw = 2039
+## `capture_home()`
 
-Later the Joint model will convert the measured motor displacement
-into joint angle using:
+For each Joint:
 
-- motor direction
-- zero reference
-- gear ratio
-- motor resolution
+```text
+Joint
+  ↓
+Motor IDs
+  ↓
+Read current positions
+  ↓
+Save home_raw
+```
 
+For Joint 2:
 
-# Calibration Persistence
+```text
+Joint 2
+├── Motor 2 HOME
+└── Motor 3 HOME
+```
 
-Measured calibration is serialized to:
+Each Motor has its own HOME value.
 
-config/joint_calibration.json
+---
 
+## `save()`
 
-The basic data flow is:
+```text
+Calibration Dictionary
+        ↓
+JSON Serialization
+        ↓
+joint_calibration.json
+```
+
+---
+
+# Data Flow
+
+```text
+┌─────────────────────────┐
+│ hardware_inventory.json │
+└────────────┬────────────┘
+             ↓
+      HardwareInventory
+
+┌─────────────────────┐
+│ robot_joints.json   │
+└──────────┬──────────┘
+           ↓
+      RobotConfig
 
 Physical Robot
+      ↓
+DynamixelConnection
 
-↓
+           ↓
+┌─────────────────────┐
+│ JointCalibration    │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────────┐
+│ joint_calibration.json  │
+└─────────────────────────┘
+```
 
-DynamixelMotor
+---
 
-↓
+# Calibration Status After Lesson 11
 
-JointCalibration
+```text
+Hardware Discovery       ✅
+Motor Mapping            ✅
+HOME position            ✅
 
-↓
+Motor direction          ⬜
+Mechanical limits        ⬜
+Gripper open / close     ⬜
+Calibration verification ⬜
+```
 
-Python Dictionary
-
-↓
-
-JSON Serialization
-
-↓
-
-joint_calibration.json
-
-
-# Current Calibration State
-
-After Lesson 11:
-
-Motor-to-joint mapping:
-Known
-
-Hardware inventory:
-Available
-
-Home position:
-Measured
-
-Motor direction:
-Not yet calibrated
-
-Mechanical limits:
-Not yet calibrated
-
-Gripper open / close:
-Not yet calibrated
-
+---
 
 # Safety
 
-Lesson 11 does not:
+This lesson does not send:
 
-- Enable torque
-- Disable torque
-- Write Goal Position
-- Move any actuator
+```text
+Goal Position      ❌
+Torque Enable      ❌
+Torque Disable     ❌
+Automatic Motion   ❌
+```
 
-It only reads Present Position.
+It only reads:
 
-Manual repositioning must never be attempted against an enabled
-motor.
+```text
+Present Position   ✅
+```
 
-Heavy robot links must be mechanically supported before manually
-repositioning joints with torque disabled.
+Do not manually force a motor while Torque is enabled.
 
+Support heavy robot links before manually changing the robot pose.
 
-# Current Architecture
+---
 
-Physical Robot
-      |
-      v
-DynamixelConnection
-      |
-      v
-DynamixelMotor
+# Result
 
+After this lesson the software can:
 
-hardware_inventory.json
-      |
-      v
-HardwareInventory
+- Validate the known Motor-to-Joint mapping.
+- Recreate Motor objects from Hardware Inventory.
+- Read current encoder positions.
+- Capture the real HOME pose.
+- Store one HOME position for each actuator.
+- Support the dual-motor Shoulder Joint.
+- Save calibration data for future robot software.
 
-
-robot_joints.json
-      |
-      v
-RobotConfig
-
-
-HardwareInventory
-       +
-RobotConfig
-       +
-Live Connection
-       |
-       v
-JointCalibration
-       |
-       v
-joint_calibration.json
-
-
-# Result of Lesson 11
-
-The software can now:
-
-- Validate motor-to-joint mapping against discovered hardware.
-- Recreate motor objects using persistent hardware inventory.
-- Read live encoder positions.
-- Capture the selected robot HOME pose.
-- Store a separate HOME reference for each actuator.
-- Correctly support the dual-motor shoulder joint.
-- Persist calibration measurements for future robot software.
-
+---
 
 # Next Lesson
 
-Semi-Automatic Direction Calibration.
+## Lesson 12 — Semi-Automatic Motor Direction Calibration
 
-The system will capture motor positions before and after a small
-manual joint displacement.
+The system will:
 
-It will calculate encoder deltas and determine the direction of each
-motor relative to joint motion.
+```text
+Read positions BEFORE
+        ↓
+Move one Joint manually in known positive direction
+        ↓
+Read positions AFTER
+        ↓
+Calculate delta
+        ↓
+Determine motor directions
+        ↓
+Save calibration
+```
 
-This is especially important for Joint 2, where Motor 2 and Motor 3
-move in opposite directions.
+This is especially important for Joint 2:
+
+```text
+Motor 2  → one direction
+Motor 3  → opposite direction
+```

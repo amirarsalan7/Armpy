@@ -16,7 +16,7 @@ if connection.open():
         if not connection.ping(connection.CM550_ID):
             raise RuntimeError("CM-550 did not respond.")
 
-        access_ready = ( connection.prepare_dynamixel_access())
+        access_ready = connection.prepare_dynamixel_access()
 
         if not access_ready:
             raise RuntimeError(
