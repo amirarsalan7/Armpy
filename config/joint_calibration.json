@@ -1,6 +1,7 @@
 {
-    "schema_version": 1,
-    "calibrated_at": "2026-09-28T15:58:37+03:30",
+    "schema_version": 2,
+    "robot_name": "ARMPy_6R",
+    "calibrated_at": "2026-10-01T15:57:45+03:30",
     "source_hardware_inventory": "config/hardware_inventory.json",
     "joints": {
         "joint1": {
@@ -8,24 +9,41 @@
             "motor_ids": [
                 1
             ],
-            "home_raw": {
-                "1": 2025
-            },
-            "direction_calibrated": true,
-            "limits_calibrated": false,
-            "direction_measuremwnt": {
-                "before_raw": {
-                    "1": 2098
-                },
-                "after_raw": {
-                    "1": 3062
-                },
-                "delta_raaw": {
-                    "1": 964
+            "home": {
+                "calibrated": true,
+                "raw": {
+                    "1": 2024
                 }
             },
-            "motor_directions": {
-                "1": 1
+            "direction": {
+                "calibrated": true,
+                "positive_motion": "Rotate the base counter-clockwise when viewed from above.",
+                "measurement": {
+                    "before_raw": {
+                        "1": 609
+                    },
+                    "after_raw": {
+                        "1": 1158
+                    },
+                    "delta_raw": {
+                        "1": 549
+                    }
+                },
+                "motor_directions": {
+                    "1": 1
+                }
+            },
+            "limits": {
+                "calibrated": true,
+                "negative_limit_raw": {
+                    "1": 1091
+                },
+                "middle_raw": {
+                    "1": 2791
+                },
+                "positive_limit_raw": {
+                    "1": 4316
+                }
             }
         },
         "joint2": {
@@ -34,29 +52,49 @@
                 2,
                 3
             ],
-            "home_raw": {
-                "2": 1542,
-                "3": 2563
-            },
-            "direction_calibrated": true,
-            "limits_calibrated": false,
-            "direction_measuremwnt": {
-                "before_raw": {
-                    "2": 1651,
-                    "3": 2451
-                },
-                "after_raw": {
-                    "2": 2682,
-                    "3": 1418
-                },
-                "delta_raaw": {
-                    "2": 1031,
-                    "3": -1033
+            "home": {
+                "calibrated": true,
+                "raw": {
+                    "2": 2385,
+                    "3": 1713
                 }
             },
-            "motor_directions": {
-                "2": 1,
-                "3": -1
+            "direction": {
+                "calibrated": true,
+                "positive_motion": "Raise the arm at the shoulder.",
+                "measurement": {
+                    "before_raw": {
+                        "2": 3048,
+                        "3": 1055
+                    },
+                    "after_raw": {
+                        "2": 2321,
+                        "3": 1772
+                    },
+                    "delta_raw": {
+                        "2": -727,
+                        "3": 717
+                    }
+                },
+                "motor_directions": {
+                    "2": -1,
+                    "3": 1
+                }
+            },
+            "limits": {
+                "calibrated": true,
+                "negative_limit_raw": {
+                    "2": 2729,
+                    "3": 1372
+                },
+                "middle_raw": {
+                    "2": 2062,
+                    "3": 2034
+                },
+                "positive_limit_raw": {
+                    "2": 921,
+                    "3": 3176
+                }
             }
         },
         "joint3": {
@@ -64,24 +102,41 @@
             "motor_ids": [
                 4
             ],
-            "home_raw": {
-                "4": 2428
-            },
-            "direction_calibrated": true,
-            "limits_calibrated": false,
-            "direction_measuremwnt": {
-                "before_raw": {
-                    "4": 1486
-                },
-                "after_raw": {
-                    "4": 2554
-                },
-                "delta_raaw": {
-                    "4": 1068
+            "home": {
+                "calibrated": true,
+                "raw": {
+                    "4": 2685
                 }
             },
-            "motor_directions": {
-                "4": 1
+            "direction": {
+                "calibrated": true,
+                "positive_motion": "Extend the elbow.",
+                "measurement": {
+                    "before_raw": {
+                        "4": 2115
+                    },
+                    "after_raw": {
+                        "4": 2885
+                    },
+                    "delta_raw": {
+                        "4": 770
+                    }
+                },
+                "motor_directions": {
+                    "4": 1
+                }
+            },
+            "limits": {
+                "calibrated": true,
+                "negative_limit_raw": {
+                    "4": 999
+                },
+                "middle_raw": {
+                    "4": 2046
+                },
+                "positive_limit_raw": {
+                    "4": 2718
+                }
             }
         },
         "joint4": {
@@ -89,24 +144,41 @@
             "motor_ids": [
                 5
             ],
-            "home_raw": {
-                "5": 2021
-            },
-            "direction_calibrated": true,
-            "limits_calibrated": false,
-            "direction_measuremwnt": {
-                "before_raw": {
-                    "5": 2682
-                },
-                "after_raw": {
-                    "5": 1674
-                },
-                "delta_raaw": {
-                    "5": -1008
+            "home": {
+                "calibrated": true,
+                "raw": {
+                    "5": 3131
                 }
             },
-            "motor_directions": {
-                "5": -1
+            "direction": {
+                "calibrated": true,
+                "positive_motion": "Pitch the wrist upward.",
+                "measurement": {
+                    "before_raw": {
+                        "5": 2147
+                    },
+                    "after_raw": {
+                        "5": 3131
+                    },
+                    "delta_raw": {
+                        "5": 984
+                    }
+                },
+                "motor_directions": {
+                    "5": 1
+                }
+            },
+            "limits": {
+                "calibrated": true,
+                "negative_limit_raw": {
+                    "5": 1019
+                },
+                "middle_raw": {
+                    "5": 2055
+                },
+                "positive_limit_raw": {
+                    "5": 3076
+                }
             }
         },
         "joint5": {
@@ -114,30 +186,55 @@
             "motor_ids": [
                 6
             ],
-            "home_raw": {
-                "6": 2849
-            },
-            "direction_calibrated": true,
-            "limits_calibrated": false,
-            "direction_measuremwnt": {
-                "before_raw": {
-                    "6": 812
-                },
-                "after_raw": {
-                    "6": 3032
-                },
-                "delta_raaw": {
-                    "6": -1876
+            "home": {
+                "calibrated": true,
+                "raw": {
+                    "6": 3031
                 }
             },
-            "motor_directions": {
-                "6": -1
+            "direction": {
+                "calibrated": true,
+                "positive_motion": "Rotate the wrist counter-clockwise when viewed from the tool side.",
+                "measurement": {
+                    "before_raw": {
+                        "6": 4347
+                    },
+                    "after_raw": {
+                        "6": 4788
+                    },
+                    "delta_raw": {
+                        "6": 441
+                    }
+                },
+                "motor_directions": {
+                    "6": 1
+                }
+            },
+            "limits": {
+                "calibrated": true,
+                "negative_limit_raw": {
+                    "6": -69
+                },
+                "middle_raw": {
+                    "6": 840
+                },
+                "positive_limit_raw": {
+                    "6": 2045
+                }
             }
         }
     },
     "gripper": {
+        "name": "gripper",
         "motor_id": 7,
-        "reference_raw": 2362,
-        "open_close_calibration": false
+        "reference": {
+            "calibrated": true,
+            "raw": 2332
+        },
+        "open_close": {
+            "calibrated": true,
+            "open_raw": 2441,
+            "close_raw": 2028
+        }
     }
 }
