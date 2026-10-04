@@ -1,7 +1,7 @@
-from dynamixel_connection import (DynamixelConnection)
-from hardware_inventory import (HardwareInventory)
-from joint_calibration import (JointCalibration)
-from config.robot_config import (RobotConfig)
+from src.armpy.hardware.dynamixel_connection import (DynamixelConnection)
+from src.armpy.hardware.hardware_inventory import (HardwareInventory)
+from src.armpy.calibration.joint_calibration import (JointCalibration)
+from armpy.config.robot_config import (RobotConfig)
 
 
 CALIBRATION_FILE = ("config/joint_calibration.json")

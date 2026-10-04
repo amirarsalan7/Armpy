@@ -4,11 +4,11 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-from dynamixel_connection import DynamixelConnection
-from hardware_inventory import HardwareInventory
-from config.robot_config import RobotConfig
-from joint_calibration import JointCalibration
-from calibration_menu import CalibrationMenu
+from src.armpy.hardware.dynamixel_connection import DynamixelConnection
+from src.armpy.hardware.hardware_inventory import HardwareInventory
+from armpy.config.robot_config import RobotConfig
+from src.armpy.calibration.joint_calibration import JointCalibration
+from src.armpy.calibration.calibration_menu import CalibrationMenu
 
 
 CALIBRATION_FILE = "config/joint_calibration.json"

@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from dynamixel_motor import DynamixelMotor
+from src.armpy.hardware.dynamixel_motor import DynamixelMotor
 
 
 class HardwareDiscovery:

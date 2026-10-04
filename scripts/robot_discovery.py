@@ -1,10 +1,10 @@
-from dynamixel_connection import DynamixelConnection
-from hardware_discovery import HardwareDiscovery
+from src.armpy.hardware.dynamixel_connection import DynamixelConnection
+from src.armpy.hardware.hardware_discovery import HardwareDiscovery
 
 EXPECTED_MOTOR_COUNT = 7
 
 OUTPUT_FILE = (
-    "config/hardware_inventory.json"
+    "data/hardware_inventory.json"
 )
 
 connection = DynamixelConnection()

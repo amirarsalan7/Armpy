@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "ArmGraph",
+  "description": "",
+  "savedAt": "2026-09-30T18:36:32.714Z",
+  "subgraph": {
+    "include": [
+      "config"
+    ],
+    "exclude": []
+  }
+}

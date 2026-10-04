@@ -1,4 +1,4 @@
-from joint import Joint
+from src.armpy.robot.joint import Joint
 
 
 class RobotArm:

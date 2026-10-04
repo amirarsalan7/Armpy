@@ -1,4 +1,4 @@
-from robot_config import RobotConfig
+from armpy.config.robot_config import RobotConfig
 
 config = RobotConfig(
     "config/robot_joints.json"

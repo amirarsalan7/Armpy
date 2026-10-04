@@ -1,5 +1,5 @@
-from dynamixel_connection import DynamixelConnection
-from dynamixel_motor import DynamixelMotor
+from src.armpy.hardware.dynamixel_connection import DynamixelConnection
+from src.armpy.hardware.dynamixel_motor import DynamixelMotor
 
 
 EXPECTED_MOTOR_COUNT = 7
