@@ -1,6 +1,9 @@
 class Joint:
 
     POSITION_COUNTS_PER_REV = 4096
+    HALF_POSITION_RANGE = 2048
+
+    HOME_TOLERANCE_COUNTS = 100
 
     def __init__(
             self,
@@ -27,6 +30,11 @@ class Joint:
         self.positive_limit_raw = positive_limit_raw
 
         self._validate_configuration()
+        self._validate_calibration_geometry()
+
+        self.min_angle_deg, self.max_angle_deg = (
+            self._calculate_angle_limits()
+        )
 
         self.min_angle_deg,self.max_angle_deg = self._calculate_angle_limits()
 
@@ -150,6 +158,16 @@ class Joint:
                 f"{self.name} calibrated limits are invalid."
             )
 
+        if not (
+            min_angle_deg
+            <= 0.0
+            <= max_angle_deg
+        ):
+            raise ValueError(
+                f"{self.name}: calibrated limits "
+                "do not contain HOME (0 deg)."
+            )
+
         return min_angle_deg,max_angle_deg
 
     def is_within_limits(self,angle_deg):
@@ -202,4 +220,60 @@ class Joint:
         return sum(angles) / len(angles)
 
     
-    
+    def counts_per_joint_degree(self):
+
+        return self._counts_per_joint_degree()
+
+    def _calculate_single_turn_delta(self, reference_raw, position_raw):
+
+        delta = position_raw - reference_raw
+
+        delta = (
+            (delta + self.HALF_POSITION_RANGE)
+            % self.POSITION_COUNTS_PER_REV
+            - self.HALF_POSITION_RANGE
+        )
+
+        return delta
+
+    def _validate_calibration_geometry(self):
+
+        for motor_id in self.motors:
+
+            home = self.home_raw[motor_id]
+            middle = self.middle_raw[motor_id]
+
+            middle_error = self._calculate_single_turn_delta(
+                home,
+                middle
+            )
+
+            if abs(middle_error) > self.HOME_TOLERANCE_COUNTS:
+                raise ValueError(
+                    f"{self.name}: Motor {motor_id} limit-calibration "
+                    f"middle is {middle_error} counts away from HOME."
+                )
+
+            negative_angle = self.motor_raw_to_joint_angle(
+                motor_id,
+                self.negative_limit_raw[motor_id]
+            )
+
+            positive_angle = self.motor_raw_to_joint_angle(
+                motor_id,
+                self.positive_limit_raw[motor_id]
+            )
+
+            if negative_angle >= 0:
+                raise ValueError(
+                    f"{self.name}: Motor {motor_id} "
+                    "negative limit is not below HOME."
+                )
+
+            if positive_angle <= 0:
+                raise ValueError(
+                    f"{self.name}: Motor {motor_id} "
+                    "positive limit is not above HOME."
+                )
+
+        return True

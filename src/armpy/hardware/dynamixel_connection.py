@@ -11,11 +11,16 @@ class DynamixelConnection:
     ADDR_BYPASS_PORT = 20
     ADDR_MODE_NUMBER = 21
     ADDR_DXL_POWER = 22
+    ADDr_CONTROLLER_ERROR = 23
     ADDR_NUM_DXL = 39
     ADDR_SCAN_DXL= 40
 
+    DXL_POWER_OFF = 0
+    DXL_POWER_ON = 1
+
     MODE_MANAGE = 2
     BYPASS_USB = 2
+
 
     # Methods
     def __init__(
@@ -82,6 +87,21 @@ class DynamixelConnection:
         )
 
         return True
+
+    def read_dynamixel_power(self):
+
+        return self.read_1byte(
+            self.CM550_ID,
+            self.ADDR_DXL_POWER
+        )
+
+
+    def read_controller_error_code(self):
+
+        return self.read_2byte(
+            self.CM550_ID,
+            self.ADDR_CONTROLLER_ERROR
+        )
 
     def read_1byte(self,device_id,address):
 
@@ -298,6 +318,25 @@ class DynamixelConnection:
             print(
                 "USB is not currently the DYNAMIXEL bypass port."
             )
+            return False
+
+        dxl_power = self.read_dynamixel_power()
+
+        if dxl_power is None:
+            print("Could not read DYNAMIXEL power state.")
+            return False
+
+        print(f"DYNAMIXEL power switch:{dxl_power}")
+
+        if dxl_power != self.DXL_POWER_ON:
+
+            error_code = self.read_controller_error_code()
+
+            print("DYNAMIXEL power is OFF.")
+
+            if error_code is not None:
+                print(f"CM-550 error code:{error_code}")
+
             return False
 
         print("USB DYNAMIXEL access is ready.")
