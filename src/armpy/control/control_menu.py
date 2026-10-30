@@ -4,6 +4,9 @@ class RobotControlMenu:
 
         self.robot = robot
 
+        self.default_velocity_deg_s = (
+            robot.DEFAULT_JOINT_VELOCITY_DEG_S
+        )
 
     def show(self):
 
@@ -16,6 +19,7 @@ class RobotControlMenu:
             print("2. Move One Joint")
             print("3. Show Joint Limits")
             print("4. Hold Joint Position")
+            print("5. Set Default Velocity")
             print("0. Exit")
 
             choice = input("\nSelect option: ").strip()
@@ -33,6 +37,9 @@ class RobotControlMenu:
 
                 elif choice == "4":
                     self.hold_joint()
+
+                elif choice == "5":
+                    self.set_default_velocity()
 
                 elif choice == "0":
                     print(
@@ -73,7 +80,7 @@ class RobotControlMenu:
             suffix = ""
 
             if len(joint.motors) > 1:
-                suffix = " [synchronized motion required]"
+                suffix = " [synchronized]"
 
             print(
                 f"{index}. {joint_key} - "
@@ -145,11 +152,6 @@ class RobotControlMenu:
             joint_key
         )
 
-        if len(joint.motors) != 1:
-            raise RuntimeError(
-                f"{joint_key}: synchronized dual-motor "
-                "motion is not implemented yet."
-            )
 
         current_angle = self.robot.read_joint_angle(
             joint_key
@@ -169,24 +171,57 @@ class RobotControlMenu:
             input("Target angle [deg]: ")
         )
 
+        velocity_text = input(
+            f"Velocity [deg/s] "
+            f"[Enter = {self.default_velocity_deg_s:.2f}]: "
+        ).strip()
+
+        if velocity_text:
+
+            velocity_deg_s = float(
+                velocity_text
+            )
+
+        else:
+
+            velocity_deg_s = (
+                self.default_velocity_deg_s
+            )
+
         plan = self.robot.preview_joint_move(
             joint_key,
-            target_angle
+            target_angle,
+            velocity_deg_s
         )
 
         print("\nMotion Plan")
+
         print(
-            f"Current: {plan['current_angle_deg']:.2f} deg"
+            f"Current:  "
+            f"{plan['current_angle_deg']:.2f} deg"
         )
+
         print(
-            f"Target:  {plan['target_angle_deg']:.2f} deg"
+            f"Target:   "
+            f"{plan['target_angle_deg']:.2f} deg"
         )
+
         print(
-            f"Move:    {plan['movement_deg']:.2f} deg"
+            f"Move:     "
+            f"{plan['movement_deg']:.2f} deg"
         )
+
         print(
-            f"Raw:     {plan['current_raw']} "
-            f"-> {plan['goal_raw']}"
+            f"Velocity: "
+            f"{plan['velocity_deg_s']:.2f} deg/s"
+        )
+
+        print(
+            f"Raw current: {plan['current_raw']}"
+        )
+
+        print(
+            f"Raw goals:   {plan['goal_raw']}"
         )
 
         answer = input(
@@ -199,7 +234,8 @@ class RobotControlMenu:
 
         result = self.robot.move_joint(
             joint_key,
-            target_angle
+            target_angle,
+            velocity_deg_s
         )
 
         print(
@@ -208,45 +244,42 @@ class RobotControlMenu:
         )
 
 
-    def hold_joint(self, joint_key):
+    def hold_joint(self):
 
-        joint = self._require_single_motor_joint(
+        joint_key = self._choose_joint()
+
+        if joint_key is None:
+            return
+
+        positions = self.robot.hold_joint(
             joint_key
         )
 
-        motor_id = next(iter(joint.motors))
-        motor = joint.motors[motor_id]
-
-        torque = motor.read_torque_enabled()
-
-        if torque is None:
-            raise RuntimeError(
-                f"{joint_key}: could not read torque state "
-                f"from Motor {motor.motor_id}."
-            )
-
-        if torque != motor.TORQUE_ON:
-            raise RuntimeError(
-                f"{joint_key}: torque is not enabled."
-            )
-
-        present_raw = motor.read_present_position_raw()
-
-        if present_raw is None:
-            raise RuntimeError(
-                f"{joint_key}: could not read Present Position "
-                f"from Motor {motor.motor_id}."
-            )
-
-        motor.validate_goal_position_raw(
-            present_raw
+        print(
+            f"{joint_key} holding at "
+            f"{positions}."
         )
 
-        if not motor.set_goal_position_raw(
-            present_raw
-        ):
-            raise RuntimeError(
-                f"{joint_key}: could not hold current position."
-            )
+    def set_default_velocity(self):
 
-        return present_raw
+        print(
+            f"\nCurrent velocity: "
+            f"{self.default_velocity_deg_s:.2f} deg/s"
+        )
+
+        velocity = float(
+            input(
+                "New joint velocity [deg/s]: "
+            )
+        )
+
+        self.robot._validate_joint_velocity(
+            velocity
+        )
+
+        self.default_velocity_deg_s = velocity
+
+        print(
+            f"Default velocity set to "
+            f"{velocity:.2f} deg/s."
+        )

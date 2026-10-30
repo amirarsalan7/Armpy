@@ -1,6 +1,6 @@
 import time
-from dynamixel_sdk import PortHandler, PacketHandler, COMM_SUCCESS
-
+from dynamixel_sdk import PortHandler, PacketHandler
+from dynamixel_sdk import COMM_SUCCESS, GroupSyncWrite
 
 class DynamixelConnection:
 
@@ -244,7 +244,71 @@ class DynamixelConnection:
             )
             return False
         return True
-    
+
+    def sync_write(
+        self,
+        address,
+        data_length,
+        values_by_id
+    ):
+
+        if data_length not in (1, 2, 4):
+            raise ValueError(
+                "SyncWrite supports 1, 2, or 4 byte values."
+            )
+
+        group = GroupSyncWrite(
+            self.port_handler,
+            self.packet_handler,
+            address,
+            data_length
+        )
+
+        try:
+
+            max_value = ( 1 << ( 8 * data_length) ) - 1
+
+            for device_id, value in values_by_id.items():
+
+                value = int(value)
+
+                if not (
+                    0
+                    <= value
+                    <= max_value
+                ):
+                    raise ValueError(
+                        f"Invalid SyncWrite value "
+                        f"for Motor {device_id}: {value}"
+                    )
+
+                data = [
+                    (value >> (8 * index)) & 0xFF
+                    for index in range(data_length)
+                ]
+
+                if not group.addParam(
+                    int(device_id),
+                    data
+                ):
+                    raise RuntimeError(
+                        f"Could not add Motor {device_id} "
+                        "to SyncWrite."
+                    )
+
+            comm_result = group.txPacket()
+
+            if comm_result != COMM_SUCCESS:
+                raise RuntimeError(
+                    "SyncWrite communication failed: "
+                    f"{self.packet_handler.getTxRxResult(comm_result)}"
+                )
+
+            return True
+
+        finally:
+
+            group.clearParam()
 
     def scan_dynamixels(self):
 
