@@ -291,6 +291,61 @@ class TestRobot(unittest.TestCase):
                 gripper=self.gripper
             )
 
+    def test_default_joint_velocity(self):
+
+        self.assertEqual(
+            self.robot.default_joint_velocity_deg_s,
+            Robot.DEFAULT_JOINT_VELOCITY_DEG_S
+        )
+
+    def test_set_default_joint_velocity(self):
+
+        velocity = (
+            self.robot.set_default_joint_velocity(
+                60.0
+            )
+        )
+
+        self.assertEqual(
+            velocity,
+            60.0
+        )
+
+        self.assertEqual(
+            self.robot.default_joint_velocity_deg_s,
+            60.0
+    )
+
+    def test_joint_goal_positions_are_valid_raw_values(self):
+
+        for joint in self.joints.values():
+
+            test_angles = [
+                joint.min_angle_deg,
+                0.0,
+                joint.max_angle_deg
+            ]
+
+            for angle in test_angles:
+
+                goals = (
+                    joint.calculate_goal_positions(
+                        angle
+                    )
+                )
+
+                for raw_position in goals.values():
+
+                    self.assertGreaterEqual(
+                        raw_position,
+                        0
+                    )
+
+                    self.assertLess(
+                        raw_position,
+                        Joint.POSITION_COUNTS_PER_REV
+                    )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

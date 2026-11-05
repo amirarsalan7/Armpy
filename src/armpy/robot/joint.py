@@ -36,8 +36,6 @@ class Joint:
             self._calculate_angle_limits()
         )
 
-        self.min_angle_deg,self.max_angle_deg = self._calculate_angle_limits()
-
     def _validate_configuration(self):
 
         if not self.motors:
@@ -94,41 +92,214 @@ class Joint:
             / 360
         )
 
-    def motor_raw_to_joint_angle(self,motor_id,raw_position):
+    def motor_raw_to_joint_angle(
+        self,
+        motor_id,
+        raw_position
+    ):
 
         if motor_id not in self.motors:
             raise ValueError(
-                f"Motor {motor_id} does not belong to {self.name}."
+                f"Motor {motor_id} does not belong "
+                f"to Joint {self.name}."
             )
 
-        home = self.home_raw[motor_id]
-        direction = self.motor_directions[motor_id]
+        raw_position = int(
+            raw_position
+        )
 
-        delta_raw = raw_position - home
+        # During Joint initialization, angle limits may
+        # not exist yet. Calibration raw values are
+        # already logical/unwrapped values.
+        if not (
+            hasattr(self, "min_angle_deg")
+            and
+            hasattr(self, "max_angle_deg")
+        ):
 
-        angle_deg = (delta_raw
-                     / self._counts_per_joint_degree()
-                     * direction )
-
-        return angle_deg
-
-    def joint_angle_to_motor_raw(self,motor_id,angle_deg):
-
-        if motor_id not in self.motors:
-            raise ValueError(
-                f"Motor {motor_id} does not belong to {self.name}."
+            raise RuntimeError(
+                f"{self.name}: Joint angle limits "
+                "have not been initialized."
             )
 
-        home = self.home_raw[motor_id]
-        direction = self.motor_directions[motor_id]
+        candidates = []
 
-        raw_delta = (
-            angle_deg
-            *self._counts_per_joint_degree()
+        for turn_offset in range(-2, 3):
+
+            logical_raw = (
+                raw_position
+                + turn_offset
+                * self.POSITION_COUNTS_PER_REV
+            )
+
+            angle = (
+                self._logical_raw_to_joint_angle(
+                    motor_id,
+                    logical_raw
+                )
+            )
+
+            candidates.append(
+                angle
+            )
+
+        valid_candidates = [
+            angle
+            for angle in candidates
+            if (
+                self.min_angle_deg - 1.0
+                <= angle
+                <= self.max_angle_deg + 1.0
+            )
+        ]
+
+        if len(valid_candidates) == 1:
+            return valid_candidates[0]
+
+        if valid_candidates:
+
+            midpoint = (
+                self.min_angle_deg
+                + self.max_angle_deg
+            ) / 2.0
+
+            return min(
+                valid_candidates,
+                key=lambda angle: abs(
+                    angle - midpoint
+                )
+            )
+
+        # Fallback for diagnostics if the physical
+        # position is outside calibrated limits.
+        def distance_from_limits(angle):
+
+            if angle < self.min_angle_deg:
+                return (
+                    self.min_angle_deg
+                    - angle
+                )
+
+            if angle > self.max_angle_deg:
+                return (
+                    angle
+                    - self.max_angle_deg
+                )
+
+            return 0.0
+
+        return min(
+            candidates,
+            key=distance_from_limits
+        )
+    def _logical_raw_to_joint_angle(
+        self,
+        motor_id,
+        logical_raw
+    ):
+
+        counts_per_degree = (
+            self._counts_per_joint_degree()
+        )
+
+        direction = (
+            self.motor_directions[motor_id]
+        )
+
+        delta = (
+            logical_raw
+            - self.home_raw[motor_id]
+        )
+
+        return (
+            delta
+            / counts_per_degree
             * direction
         )
 
-        return round(home + raw_delta)
+    def _calibration_raw_to_joint_angle(
+        self,
+        motor_id,
+        raw_position,
+        expected_sign
+    ):
+
+        if expected_sign not in (-1, 1):
+            raise ValueError(
+                "Expected sign must be -1 or +1."
+            )
+
+        raw_position = int(
+            raw_position
+        )
+
+        candidates = []
+
+        for turn_offset in range(-2, 3):
+
+            logical_raw = (
+                raw_position
+                + turn_offset
+                * self.POSITION_COUNTS_PER_REV
+            )
+
+            angle = (
+                self._logical_raw_to_joint_angle(
+                    motor_id,
+                    logical_raw
+                )
+            )
+
+            if expected_sign * angle > 0:
+                candidates.append(
+                    angle
+                )
+
+        if not candidates:
+
+            raise ValueError(
+                f"{self.name}: Could not resolve "
+                f"calibration position for Motor "
+                f"{motor_id}."
+            )
+
+        return min(
+            candidates,
+            key=abs
+        )
+
+    def joint_angle_to_motor_raw(
+        self,
+        motor_id,
+        angle_deg
+    ):
+
+        if motor_id not in self.motors:
+            raise ValueError(
+                f"Motor {motor_id} does not belong "
+                f"to {self.name}."
+            )
+
+        home = self.home_raw[motor_id]
+
+        direction = (
+            self.motor_directions[motor_id]
+        )
+
+        raw_delta = (
+            float(angle_deg)
+            * self._counts_per_joint_degree()
+            * direction
+        )
+
+        logical_raw = round(
+            home + raw_delta
+        )
+
+        return (
+            logical_raw
+            % self.POSITION_COUNTS_PER_REV
+        )
 
     def _calculate_angle_limits(self):
 
@@ -137,14 +308,20 @@ class Joint:
 
         for motor_id in self.motors:
 
-            negative_angle = self.motor_raw_to_joint_angle(
-                motor_id,
-                self.negative_limit_raw[motor_id]
+            negative_angle = (
+                self._calibration_raw_to_joint_angle(
+                    motor_id,
+                    self.negative_limit_raw[motor_id],
+                    expected_sign=-1
+                )
             )
 
-            positive_angle = self.motor_raw_to_joint_angle(
-                motor_id,
-                self.positive_limit_raw[motor_id]
+            positive_angle = (
+                self._calibration_raw_to_joint_angle(
+                    motor_id,
+                    self.positive_limit_raw[motor_id],
+                    expected_sign=1
+                )
             )
 
             negative_angles.append(negative_angle)
@@ -254,14 +431,20 @@ class Joint:
                     f"middle is {middle_error} counts away from HOME."
                 )
 
-            negative_angle = self.motor_raw_to_joint_angle(
-                motor_id,
-                self.negative_limit_raw[motor_id]
+            negative_angle = (
+                self._calibration_raw_to_joint_angle(
+                    motor_id,
+                    self.negative_limit_raw[motor_id],
+                    expected_sign=-1
+                )
             )
 
-            positive_angle = self.motor_raw_to_joint_angle(
-                motor_id,
-                self.positive_limit_raw[motor_id]
+            positive_angle = (
+                self._calibration_raw_to_joint_angle(
+                    motor_id,
+                    self.positive_limit_raw[motor_id],
+                    expected_sign=1
+                )
             )
 
             if negative_angle >= 0:

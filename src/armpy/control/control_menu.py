@@ -1,28 +1,89 @@
+import sys
+import termios
+
 class RobotControlMenu:
 
-    def __init__(self, robot):
+    def __init__(
+        self,
+        robot,
+        pose_controller,
+        jog_controller,
+        keyboard_controller,
+        joystick_controller
+    ):
 
         self.robot = robot
 
-        self.default_velocity_deg_s = (
-            robot.DEFAULT_JOINT_VELOCITY_DEG_S
-        )
+        self.pose_controller = pose_controller
+        self.jog_controller = jog_controller
+        self.keyboard_controller = keyboard_controller
+        self.joystick_controller = joystick_controller
 
+        self.default_velocity_deg_s = (
+            robot.default_joint_velocity_deg_s
+        )
+        
     def show(self):
 
         while True:
 
-            print("\n========================")
-            print("ARMPy Control")
-            print("========================")
-            print("1. Read Robot State")
-            print("2. Move One Joint")
-            print("3. Show Joint Limits")
-            print("4. Hold Joint Position")
-            print("5. Set Default Velocity")
-            print("0. Exit")
+            print(
+                "\n========================"
+            )
 
-            choice = input("\nSelect option: ").strip()
+            print(
+                "ARMPy Control"
+            )
+
+            print(
+                "========================"
+            )
+
+            print(
+                f"Robot: {self.robot.name}"
+            )
+
+            print(
+                f"Velocity: "
+                f"{self.default_velocity_deg_s:.2f} deg/s"
+            )
+
+            print(
+                f"Jog Step: "
+                f"{self.jog_controller.step_deg:.2f} deg"
+            )
+
+            print(
+                "------------------------"
+            )
+
+            print(
+                "1. Robot Status"
+            )
+
+            print(
+                "2. Motion"
+            )
+
+            print(
+                "3. Pose Manager"
+            )
+
+            print(
+                "4. Jog / Teleoperation"
+            )
+
+            print(
+                "5. Settings"
+            )
+
+            print(
+                "0. Exit"
+            )
+
+            choice = input(
+                "\nSelect option: "
+            ).strip()
 
             try:
 
@@ -30,26 +91,30 @@ class RobotControlMenu:
                     self.show_robot_state()
 
                 elif choice == "2":
-                    self.move_one_joint()
+                    self.motion_menu()
 
                 elif choice == "3":
-                    self.show_joint_limits()
+                    self.pose_menu()
 
                 elif choice == "4":
-                    self.hold_joint()
+                    self.jog_menu()
 
                 elif choice == "5":
-                    self.set_default_velocity()
+                    self.settings_menu()
 
                 elif choice == "0":
+
                     print(
                         "Exiting control menu. "
                         "Motor torque states are unchanged."
                     )
+
                     return
 
                 else:
-                    print("Invalid option.")
+                    print(
+                        "Invalid option."
+                    )
 
             except (
                 RuntimeError,
@@ -61,6 +126,225 @@ class RobotControlMenu:
                     f"\nControl error: {error}"
                 )
 
+    def motion_menu(self):
+
+        while True:
+
+            print(
+                "\n--- Motion ---"
+            )
+
+            print(
+                "1. Move One Joint"
+            )
+
+            print(
+                "2. Move Multiple Joints"
+            )
+
+            print(
+                "3. Move HOME"
+            )
+
+            print(
+                "4. Hold Joint Position"
+            )
+
+            print(
+                "5. Show Joint Limits"
+            )
+
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "1":
+                self.move_one_joint()
+
+            elif choice == "2":
+                self.move_multiple_joints()
+
+            elif choice == "3":
+                self.move_home()
+
+            elif choice == "4":
+                self.hold_joint()
+
+            elif choice == "5":
+                self.show_joint_limits()
+
+            elif choice == "0":
+                return
+
+            else:
+                print(
+                    "Invalid option."
+                )
+
+    def pose_menu(self):
+
+        while True:
+
+            print(
+                "\n--- Pose Manager ---"
+            )
+
+            print(
+                "1. Move to Pose"
+            )
+
+            print(
+                "2. Save Current Position"
+            )
+
+            print(
+                "3. Edit Pose"
+            )
+
+            print(
+                "4. Rename Pose"
+            )
+
+            print(
+                "5. Delete Pose"
+            )
+
+            print(
+                "6. Show Pose Values"
+            )
+
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "1":
+                self.move_named_pose()
+
+            elif choice == "2":
+                self.save_current_pose()
+
+            elif choice == "3":
+                self.edit_pose()
+
+            elif choice == "4":
+                self.rename_pose()
+
+            elif choice == "5":
+                self.delete_pose()
+
+            elif choice == "6":
+                self.show_pose_values()
+
+            elif choice == "0":
+                return
+
+            else:
+                print(
+                    "Invalid option."
+                )
+
+    def jog_menu(self):
+
+        while True:
+
+            print(
+                "\n--- Jog / Teleoperation ---"
+            )
+
+            print(
+                "1. Jog One Joint"
+            )
+
+            print(
+                "2. Keyboard Jog"
+            )
+
+            print(
+                "3. Joystick Jog"
+            )
+
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "1":
+                self.jog_joint()
+
+            elif choice == "2":
+                self.keyboard_controller.run()
+
+            elif choice == "3":
+                self.joystick_controller.run()
+
+            elif choice == "0":
+                return
+
+            else:
+                print(
+                    "Invalid option."
+                )
+
+    def settings_menu(self):
+
+        while True:
+
+            print(
+                "\n--- Settings ---"
+            )
+
+            print(
+                f"Velocity: "
+                f"{self.default_velocity_deg_s:.2f} deg/s"
+            )
+
+            print(
+                f"Jog Step: "
+                f"{self.jog_controller.step_deg:.2f} deg"
+            )
+
+            print()
+
+            print(
+                "1. Set Default Velocity"
+            )
+
+            print(
+                "2. Set Jog Step"
+            )
+
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "1":
+                self.set_default_velocity()
+
+            elif choice == "2":
+                self.set_jog_step()
+
+            elif choice == "0":
+                return
+
+            else:
+                print(
+                    "Invalid option."
+                )
 
     def _choose_joint(self):
 
@@ -103,7 +387,72 @@ class RobotControlMenu:
                 "Invalid joint selection."
             )
 
+    def _choose_pose(
+        self,
+        allow_home=True
+    ):
 
+        names = (
+            self.pose_controller
+            .get_pose_names()
+        )
+
+        if not allow_home:
+
+            names = [
+                name
+                for name in names
+                if name != "home"
+            ]
+
+        if not names:
+
+            print(
+                "No poses are available."
+            )
+            return None
+
+        print(
+            "\nSelect Pose:"
+        )
+
+        for index, name in enumerate(
+            names,
+            start=1
+        ):
+
+            print(
+                f"{index}. {name}"
+            )
+
+        print(
+            "0. Back"
+        )
+
+        choice = input(
+            "Select: "
+        ).strip()
+
+        if choice == "0":
+            return None
+
+        try:
+
+            index = int(choice) - 1
+
+            return names[
+                index
+            ]
+
+        except (
+            ValueError,
+            IndexError
+        ):
+
+            raise ValueError(
+                "Invalid pose selection."
+            )
+    
     def show_robot_state(self):
 
         state = self.robot.read_state()
@@ -125,7 +474,6 @@ class RobotControlMenu:
             state["gripper"]["raw_position"]
         )
 
-
     def show_joint_limits(self):
 
         for joint_key in self.robot.get_joint_names():
@@ -139,7 +487,6 @@ class RobotControlMenu:
                 f"{joint.min_angle_deg:.2f} "
                 f"to {joint.max_angle_deg:.2f} deg"
             )
-
 
     def move_one_joint(self):
 
@@ -232,17 +579,136 @@ class RobotControlMenu:
             print("Motion cancelled.")
             return
 
-        result = self.robot.move_joint(
-            joint_key,
-            target_angle,
-            velocity_deg_s
+        try:
+
+            result = self.robot.move_joint(
+                joint_key,
+                target_angle,
+                velocity_deg_s
+            )
+
+            print(
+                f"{joint_key} reached target. "
+                f"Final raw: {result['final_raw']}"
+            )
+
+        finally:
+
+            self._flush_pending_input()
+
+    def move_multiple_joints(self):
+
+        targets = {}
+
+        print(
+            "\nEnter target angle or press Enter to skip."
+        )
+
+        for joint_key in self.robot.get_joint_names():
+
+            current = self.robot.read_joint_angle(
+                joint_key
+            )
+
+            value = input(
+                f"{joint_key} "
+                f"[current {current:.2f} deg]: "
+            ).strip()
+
+            if not value:
+                continue
+
+            targets[joint_key] = float(
+                value
+            )
+
+        if not targets:
+            print("No targets selected.")
+            return
+
+        preview = (
+            self.robot.preview_multi_joint_move(
+                targets,
+                self.default_velocity_deg_s
+            )
+        )
+
+        print("\nMulti-Joint Motion Plan")
+
+        for joint_key, plan in preview["joint_plans"].items():
+
+            print(
+                f"{joint_key}: "
+                f"{plan['current_angle_deg']:.2f} "
+                f"→ {plan['target_angle_deg']:.2f} deg"
+            )
+
+        answer = input(
+            "Execute? [y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+            return
+
+        try:
+
+            self.robot.move_joints(
+                targets,
+                self.default_velocity_deg_s
+            )
+
+            print(
+                "Multi-joint motion completed."
+            )
+
+        finally:
+
+            self._flush_pending_input()
+
+    def move_named_pose(self):
+
+        pose_name = self._choose_pose(
+            allow_home=True
+        )
+
+        if pose_name is None:
+            return
+
+        print(
+            f"\nSelected pose: {pose_name}"
         )
 
         print(
-            f"{joint_key} reached target. "
-            f"Final raw: {result['final_raw']}"
+            f"Velocity: "
+            f"{self.default_velocity_deg_s:.2f} deg/s"
         )
 
+        answer = input(
+            "Execute this pose? [y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+
+            print(
+                "Pose motion cancelled."
+            )
+
+            return
+
+        try:
+
+            self.pose_controller.move_pose(
+                pose_name,
+                self.default_velocity_deg_s
+            )
+
+            print(
+                f"Pose '{pose_name}' completed."
+            )
+
+        finally:
+
+            self._flush_pending_input()
 
     def hold_joint(self):
 
@@ -273,13 +739,430 @@ class RobotControlMenu:
             )
         )
 
-        self.robot._validate_joint_velocity(
-            velocity
+        updated_velocity = (
+            self.jog_controller.set_velocity(
+                velocity
+            )
         )
 
-        self.default_velocity_deg_s = velocity
+        self.default_velocity_deg_s = (
+            updated_velocity
+        )
 
         print(
             f"Default velocity set to "
-            f"{velocity:.2f} deg/s."
+            f"{updated_velocity:.2f} deg/s."
         )
+
+    def set_jog_step(self):
+
+        print(
+            f"\nCurrent Jog step: "
+            f"{self.jog_controller.step_deg:.2f} deg"
+        )
+
+        step_deg = float(
+            input(
+                "New Jog step [deg]: "
+            )
+        )
+
+        if step_deg <= 0:
+            raise ValueError(
+                "Jog step must be greater than zero."
+            )
+
+        self.jog_controller.step_deg = (
+            step_deg
+        )
+
+        print(
+            f"Jog step set to "
+            f"{step_deg:.2f} deg."
+        )
+
+    def move_home(self):
+
+        print(
+            "\nHOME will move all joints "
+            "to calibrated zero."
+        )
+
+        print(
+            f"Velocity: "
+            f"{self.default_velocity_deg_s:.2f} deg/s"
+        )
+
+        answer = input(
+            "Move robot to HOME? [y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+
+            print(
+                "HOME motion cancelled."
+            )
+
+            return
+
+        try:
+
+            self.pose_controller.home(
+                self.default_velocity_deg_s
+            )
+
+            print(
+                "Robot reached HOME."
+            )
+
+        finally:
+
+            self._flush_pending_input()
+
+    def jog_joint(self):
+
+        joint_key = self._choose_joint()
+
+        if joint_key is None:
+            return
+
+        direction_text = input(
+            "Direction [+/-]: "
+        ).strip()
+
+        if direction_text == "+":
+            direction = 1
+
+        elif direction_text == "-":
+            direction = -1
+
+        else:
+            raise ValueError(
+                "Invalid Jog direction."
+            )
+
+        step_deg = float(
+            input(
+                f"Step [deg] "
+                f"[default {self.jog_controller.step_deg}]: "
+            )
+            or self.jog_controller.step_deg
+        )
+
+        self.jog_controller.jog(
+            joint_key,
+            direction,
+            step_deg,
+            self.default_velocity_deg_s
+        )    
+
+    def save_current_pose(self):
+
+        print(
+            "\nSave Current Robot Pose"
+        )
+
+        pose_name = input(
+            "Pose name: "
+        ).strip()
+
+        if not pose_name:
+            raise ValueError(
+                "Pose name cannot be empty."
+            )
+
+        current_state = (
+            self.robot.read_all_joint_angles()
+        )
+
+        print(
+            "\nCurrent Joint Angles:"
+        )
+
+        for joint_key, angle_deg in (
+            current_state.items()
+        ):
+
+            print(
+                f"{joint_key}: "
+                f"{angle_deg:.2f} deg"
+            )
+
+        warnings = (
+            self.pose_controller
+            .get_limit_warnings(
+                current_state
+            )
+        )
+
+        if warnings:
+
+            print(
+                "\nWARNING: "
+                "Pose is close to joint limits:"
+            )
+
+            for warning in warnings:
+                print(
+                    f"- {warning}"
+                )
+
+        answer = input(
+            f"\nSave as '{pose_name}'? "
+            "[y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+            print(
+                "Pose was not saved."
+            )
+            return
+
+        try:
+
+            saved = (
+                self.pose_controller
+                .pose_library
+                .save_pose(
+                    pose_name,
+                    current_state
+                )
+            )
+
+        except ValueError as error:
+
+            if "already exists" not in str(error):
+                raise
+
+            overwrite = input(
+                "Pose already exists. "
+                "Overwrite? [y/n]: "
+            ).strip().lower()
+
+            if overwrite != "y":
+                return
+
+            saved = (
+                self.pose_controller
+                .pose_library
+                .save_pose(
+                    pose_name,
+                    current_state,
+                    overwrite=True
+                )
+            )
+
+        print(
+            f"Pose '{pose_name}' saved."
+        )
+
+        print(
+            saved
+        )
+
+    def edit_pose(self):
+
+        pose_name = self._choose_pose(
+            allow_home=False
+        )
+
+        if pose_name is None:
+            return
+
+        while True:
+
+            pose = (
+                self.pose_controller.get_pose(
+                    pose_name
+                )
+            )
+
+            print(
+                f"\nEdit Pose: {pose_name}"
+            )
+
+            for joint_key, angle_deg in (
+                pose.items()
+            ):
+
+                print(
+                    f"{joint_key}: "
+                    f"{angle_deg:.2f} deg"
+                )
+
+            print()
+            print(
+                "1. Replace entire pose "
+                "with current robot position"
+            )
+            print(
+                "2. Edit one joint manually"
+            )
+            print(
+                "3. Capture one joint "
+                "from current robot"
+            )
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "0":
+                return
+
+            if choice == "1":
+
+                answer = input(
+                    "Replace complete pose? "
+                    "[y/n]: "
+                ).strip().lower()
+
+                if answer == "y":
+
+                    self.pose_controller.update_pose_from_current(
+                        pose_name
+                    )
+
+                    print(
+                        "Pose updated."
+                    )
+
+            elif choice in ("2", "3"):
+
+                joint_key = (
+                    self._choose_joint()
+                )
+
+                if joint_key is None:
+                    continue
+
+                if choice == "2":
+
+                    angle_deg = float(
+                        input(
+                            "New angle [deg]: "
+                        )
+                    )
+
+                    self.pose_controller.update_pose_joint(
+                        pose_name,
+                        joint_key,
+                        angle_deg
+                    )
+
+                else:
+
+                    self.pose_controller.capture_current_joint(
+                        pose_name,
+                        joint_key
+                    )
+
+                print(
+                    "Pose updated."
+                )
+
+            else:
+
+                print(
+                    "Invalid option."
+                )
+
+    def rename_pose(self):
+
+        pose_name = self._choose_pose(
+            allow_home=False
+        )
+
+        if pose_name is None:
+            return
+
+        new_name = input(
+            "New pose name: "
+        ).strip()
+
+        renamed = (
+            self.pose_controller.rename_pose(
+                pose_name,
+                new_name
+            )
+        )
+
+        print(
+            f"Pose renamed to '{renamed}'."
+        )
+
+    def delete_pose(self):
+
+        pose_name = self._choose_pose(
+            allow_home=False
+        )
+
+        if pose_name is None:
+            return
+
+        answer = input(
+            f"Delete pose '{pose_name}'? "
+            "[y/n]: "
+        ).strip().lower()
+
+        if answer != "y":
+            return
+
+        self.pose_controller.delete_pose(
+            pose_name
+        )
+
+        print(
+            f"Pose '{pose_name}' deleted."
+        )
+
+    def show_pose_values(self):
+
+        pose_name = self._choose_pose()
+
+        if pose_name is None:
+            return
+
+        pose = (
+            self.pose_controller.get_pose(
+                pose_name
+            )
+        )
+
+        print(
+            f"\nPose: {pose_name}"
+        )
+
+        for joint_key, angle_deg in (
+            pose.items()
+        ):
+
+            print(
+                f"{joint_key}: "
+                f"{angle_deg:.2f} deg"
+            )
+
+    def _flush_pending_input(self):
+
+        try:
+
+            if not sys.stdin.isatty():
+                return
+
+            fd = sys.stdin.fileno()
+
+            termios.tcflush(
+                fd,
+                termios.TCIFLUSH
+            )
+
+        except (
+            OSError,
+            AttributeError,
+            termios.error
+        ):
+
+            pass

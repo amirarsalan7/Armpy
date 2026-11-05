@@ -3,17 +3,24 @@ import time
 class Robot:
 
     POSITION_TOLERANCE_DEG = 1.0
+
+    JOINT_POSITION_TOLERANCE_DEG = {
+        "joint1": 1.0,
+        "joint2": 2.5,
+        "joint3": 3.5,
+        "joint4": 3.5,
+        "joint5": 1.0,
+    }
+
     POLL_INTERVAL_S = 0.05
 
-    DEFAULT_JOINT_VELOCITY_DEG_S = 10.0
+    DEFAULT_JOINT_VELOCITY_DEG_S = 40.0
     MIN_JOINT_VELOCITY_DEG_S = 1.0
-    MAX_JOINT_VELOCITY_DEG_S = 30.0
+    MAX_JOINT_VELOCITY_DEG_S = 120.0
 
-    POSITION_TOLERANCE_DEG = 1.0
-
-    MOTION_TIMEOUT_SCALE = 1.8
-    MOTION_TIMEOUT_MARGIN_S = 1.5
-
+    MOTION_TIMEOUT_SCALE = 2.5
+    MOTION_TIMEOUT_MARGIN_S = 2.0
+    MIN_MOTION_TIMEOUT_S = 5.0
     MAX_COUPLED_ANGLE_ERROR_DEG = 3.0
 
     def __init__(self, name, motors, joints, gripper):
@@ -22,6 +29,10 @@ class Robot:
         self.motors = motors
         self.joints = joints
         self.gripper = gripper
+
+        self.default_joint_velocity_deg_s = (
+            self.DEFAULT_JOINT_VELOCITY_DEG_S
+        )
 
         self._validate_components()
 
@@ -98,6 +109,17 @@ class Robot:
 
         return self.joints[joint_key]
 
+    def _get_joint_position_tolerance(
+        self,
+        joint_key
+    ):
+
+        return (
+            self.JOINT_POSITION_TOLERANCE_DEG.get(
+                joint_key,
+                self.POSITION_TOLERANCE_DEG
+            )
+        )
 
     def get_motor(self, motor_id):
 
@@ -112,11 +134,30 @@ class Robot:
 
     def _validate_joint_velocity(self, velocity_deg_s):
 
+        if callable(velocity_deg_s):
+
+            raise TypeError(
+                "Joint velocity must be a numeric value, "
+                "not a method. Pass the method result "
+                "instead of the method itself."
+            )
+
+        if isinstance(velocity_deg_s, bool) or not isinstance(
+            velocity_deg_s,
+            (int, float)
+        ):
+
+            raise TypeError(
+                "Joint velocity must be an int or float. "
+                f"Received: {type(velocity_deg_s).__name__}"
+            )
+
         if not (
             self.MIN_JOINT_VELOCITY_DEG_S
             <= velocity_deg_s
             <= self.MAX_JOINT_VELOCITY_DEG_S
         ):
+
             raise ValueError(
                 f"Joint velocity must be between "
                 f"{self.MIN_JOINT_VELOCITY_DEG_S:.2f} "
@@ -126,6 +167,27 @@ class Robot:
 
         return True
 
+    def set_default_joint_velocity(
+        self,
+        velocity_deg_s
+    ):
+
+        velocity_deg_s = float(
+            velocity_deg_s
+        )
+
+        self._validate_joint_velocity(
+            velocity_deg_s
+        )
+
+        self.default_joint_velocity_deg_s = (
+            velocity_deg_s
+        )
+
+        return (
+            self.default_joint_velocity_deg_s
+        )
+    
     def _calculate_profile_velocity_raw(
         self,
         joint,
@@ -177,10 +239,10 @@ class Robot:
             )
 
         return True
+
     def get_joint_names(self):
 
         return list(self.joints)
-
 
     def read_joint_raw_positions(self, joint_key):
 
@@ -329,7 +391,7 @@ class Robot:
 
         if velocity_deg_s is None:
             velocity_deg_s = (
-                self.DEFAULT_JOINT_VELOCITY_DEG_S
+                self.default_joint_velocity_deg_s
             )
 
         self._validate_joint_velocity(
@@ -423,6 +485,98 @@ class Robot:
             )
         }
 
+    def preview_multi_joint_move(
+        self,
+        targets,
+        velocity_deg_s=None
+    ):
+
+        if not isinstance(targets, dict) or not targets:
+            raise ValueError(
+                "Multi-joint targets must be a non-empty dictionary."
+            )
+
+        if velocity_deg_s is None:
+            velocity_deg_s = (
+                self.default_joint_velocity_deg_s
+            )
+
+        self._validate_joint_velocity(
+            velocity_deg_s
+        )
+
+        joint_plans = {}
+        used_motor_ids = set()
+
+        for joint_key, target_angle_deg in targets.items():
+
+            plan = self.preview_joint_move(
+                joint_key,
+                target_angle_deg,
+                velocity_deg_s
+            )
+
+            motor_ids = set(
+                plan["goal_raw"]
+            )
+
+            duplicated = (
+                used_motor_ids
+                & motor_ids
+            )
+
+            if duplicated:
+                raise RuntimeError(
+                    f"Motors are used by multiple target joints: "
+                    f"{sorted(duplicated)}."
+                )
+
+            used_motor_ids.update(
+                motor_ids
+            )
+
+            joint_plans[joint_key] = plan
+
+        return {
+            "targets": dict(targets),
+            "velocity_deg_s": velocity_deg_s,
+            "joint_plans": joint_plans
+        }
+
+    def _collect_multi_joint_goals(self, joint_plans):
+
+        goals = {}
+
+        for plan in joint_plans.values():
+
+            for motor_id, goal_raw in plan["goal_raw"].items():
+
+                if motor_id in goals:
+                    raise RuntimeError(
+                        f"Motor {motor_id} received more than one goal."
+                    )
+
+                goals[motor_id] = goal_raw
+
+        return goals
+
+    def _set_multi_joint_profile_velocity(
+        self,
+        joint_plans
+    ):
+
+        for joint_key, plan in joint_plans.items():
+
+            joint = self.get_joint(
+                joint_key
+            )
+
+            self._set_joint_profile_velocity(
+                joint,
+                plan
+            )
+        return True
+    
     def _set_joint_profile_velocity(
         self,
         joint,
@@ -442,37 +596,6 @@ class Robot:
                     f"Motor {motor.motor_id}: "
                     "could not set Profile Velocity."
                 )
-
-        return True
-
-    def _validate_joint_alignment(self, joint, raw_positions ):
-
-        if len(joint.motors) <= 1:
-            return True
-
-        motor_angles = []
-
-        for motor_id, raw_position in raw_positions.items():
-
-            angle = joint.motor_raw_to_joint_angle(
-                motor_id,
-                raw_position
-            )
-
-            motor_angles.append(
-                angle
-            )
-
-        angle_error = (
-            max(motor_angles)
-            - min(motor_angles)
-        )
-
-        if angle_error > self.MAX_COUPLED_ANGLE_ERROR_DEG:
-            raise RuntimeError(
-                f"{joint.name}: coupled motors disagree by "
-                f"{angle_error:.2f} deg."
-            )
 
         return True
     
@@ -551,6 +674,28 @@ class Robot:
 
         return True
 
+    def _prepare_multi_joint_torque(
+        self,
+        joint_plans
+    ):
+
+        enabled_by_command = {}
+
+        for joint_key, plan in joint_plans.items():
+
+            joint = self.get_joint(
+                joint_key
+            )
+
+            enabled_by_command[joint_key] = (
+                self._prepare_joint_torque(
+                    joint,
+                    plan
+                )
+            )
+
+        return enabled_by_command
+    
     def _write_joint_goal_positions(
         self,
         joint,
@@ -610,6 +755,35 @@ class Robot:
 
         return True
 
+    def _write_multi_joint_goals(
+        self,
+        goals
+    ):
+
+        if not goals:
+            raise ValueError(
+                "No motor goals were provided."
+            )
+
+        first_motor_id = next(
+            iter(goals)
+        )
+
+        first_motor = self.get_motor(
+            first_motor_id
+        )
+
+        first_motor.connection.sync_write(
+            address=first_motor.ADDR_GOAL_POSITION,
+            data_length=4,
+            values_by_id={
+                int(motor_id): goal_raw
+                for motor_id, goal_raw in goals.items()
+            }
+        )
+
+        return True
+
     def _calculate_motion_timeout(
         self,
         movement_deg,
@@ -621,11 +795,36 @@ class Robot:
             / velocity_deg_s
         )
 
-        return (
+        calculated_timeout = (
             expected_time
             * self.MOTION_TIMEOUT_SCALE
             + self.MOTION_TIMEOUT_MARGIN_S
         )
+
+        return max(
+            self.MIN_MOTION_TIMEOUT_S,
+            calculated_timeout
+        )
+
+    def _calculate_multi_joint_timeout(
+        self,
+        joint_plans
+    ):
+
+        timeouts = []
+
+        for plan in joint_plans.values():
+
+            timeout = self._calculate_motion_timeout(
+                plan["movement_deg"],
+                plan["velocity_deg_s"]
+            )
+
+            timeouts.append(
+                timeout
+            )
+
+        return max(timeouts)
 
     def _hold_joint_raw_positions(
         self,
@@ -676,19 +875,45 @@ class Robot:
 
         return goals
 
+    def _hold_multi_joint_raw_positions(
+        self,
+        raw_positions_by_joint
+    ):
+
+        goals = {}
+
+        for joint_key, raw_positions in raw_positions_by_joint.items():
+
+            joint = self.get_joint(
+                joint_key
+            )
+
+            for motor_id, raw_position in raw_positions.items():
+
+                motor = joint.motors[motor_id]
+
+                goal = (
+                    raw_position
+                    % motor.COUNTS_PER_REVOLUTION
+                )
+
+                motor.validate_goal_position_raw(
+                    goal
+                )
+
+                goals[motor_id] = goal
+
+        self._write_multi_joint_goals(
+            goals
+        )
+
+        return goals
+
     def _wait_for_joint_target(
         self,
         joint,
         plan
     ):
-
-        tolerance_counts = max(
-            1,
-            round(
-                self.POSITION_TOLERANCE_DEG
-                * joint.counts_per_joint_degree()
-            )
-        )
 
         timeout = self._calculate_motion_timeout(
             plan["movement_deg"],
@@ -700,6 +925,9 @@ class Robot:
             + timeout
         )
 
+        last_angle = None
+        last_positions = None
+
         while True:
 
             raw_positions = (
@@ -708,25 +936,33 @@ class Robot:
                 )
             )
 
+            last_positions = raw_positions
+
             self._validate_joint_alignment(
                 joint,
                 raw_positions
             )
 
-            reached = True
-
-            for motor_id, goal_raw in plan["goal_raw"].items():
-
-                error = abs(
-                    goal_raw
-                    - raw_positions[motor_id]
+            current_angle = (
+                joint.calculate_joint_angle(
+                    raw_positions
                 )
+            )
 
-                if error > tolerance_counts:
-                    reached = False
-                    break
+            last_angle = current_angle
 
-            if reached:
+            angle_error = abs(
+                plan["target_angle_deg"]
+                - current_angle
+            )
+
+            tolerance_deg = (
+                self._get_joint_position_tolerance(
+                    plan["joint_key"]
+                )
+            )
+
+            if angle_error <= tolerance_deg:
                 return raw_positions
 
             if time.monotonic() >= deadline:
@@ -740,7 +976,130 @@ class Robot:
                     f"{plan['joint_key']}: "
                     f"motion timeout after "
                     f"{timeout:.2f} s. "
+                    f"Target="
+                    f"{plan['target_angle_deg']:.2f} deg, "
+                    f"actual={last_angle:.2f} deg, "
+                    f"error={angle_error:.2f} deg, "
+                    f"raw={last_positions}. "
                     "Current position was held."
+                )
+
+            time.sleep(
+                self.POLL_INTERVAL_S
+            )
+
+    def _wait_for_multi_joint_targets(
+        self,
+        joint_plans
+    ):
+
+        timeout = (
+            self._calculate_multi_joint_timeout(
+                joint_plans
+            )
+        )
+
+        deadline = (
+            time.monotonic()
+            + timeout
+        )
+
+        while True:
+
+            all_reached = True
+            current_positions = {}
+            last_joint_status = {}
+
+            for joint_key, plan in (
+                joint_plans.items()
+            ):
+
+                joint = self.get_joint(
+                    joint_key
+                )
+
+                raw_positions = (
+                    self.read_joint_raw_positions(
+                        joint_key
+                    )
+                )
+
+                current_positions[joint_key] = (
+                    raw_positions
+                )
+
+                self._validate_joint_alignment(
+                    joint,
+                    raw_positions
+                )
+
+                current_angle = (
+                    joint.calculate_joint_angle(
+                        raw_positions
+                    )
+                )
+
+                angle_error = abs(
+                    plan["target_angle_deg"]
+                    - current_angle
+                )
+
+                tolerance_deg = (
+                    self._get_joint_position_tolerance(
+                        joint_key
+                    )
+                )
+
+                last_joint_status[joint_key] = {
+                    "target": plan["target_angle_deg"],
+                    "actual": current_angle,
+                    "error": angle_error,
+                    "tolerance": tolerance_deg,
+                    "raw": raw_positions
+                }
+
+                if angle_error > tolerance_deg:
+                    all_reached = False
+
+            if all_reached:
+                return current_positions
+
+            if time.monotonic() >= deadline:
+
+                self._hold_multi_joint_raw_positions(
+                    current_positions
+                )
+
+                pending_details = []
+
+                for joint_key, status in (
+                    last_joint_status.items()
+                ):
+
+                    if (
+                        status["error"]
+                        <= status["tolerance"]
+                    ):
+                        continue
+
+                    pending_details.append(
+                        f"{joint_key}: "
+                        f"target={status['target']:.2f}, "
+                        f"actual={status['actual']:.2f}, "
+                        f"error={status['error']:.2f}, "
+                        f"tolerance={status['tolerance']:.2f}, "
+                        f"raw={status['raw']}"
+                    )
+
+                details_text = " | ".join(
+                    pending_details
+                )
+
+                raise TimeoutError(
+                    f"Multi-joint motion timeout "
+                    f"after {timeout:.2f} seconds. "
+                    f"Pending joints: {details_text}. "
+                    "Current positions were held."
                 )
 
             time.sleep(
@@ -751,7 +1110,8 @@ class Robot:
         self,
         joint_key,
         target_angle_deg,
-        velocity_deg_s=None
+        velocity_deg_s=None,
+        wait=True
     ):
 
         plan = self.preview_joint_move(
@@ -780,11 +1140,16 @@ class Robot:
             joint,
             plan["goal_raw"]
         )
+        if wait:
 
-        final_raw = self._wait_for_joint_target(
-            joint,
-            plan
-        )
+            final_raw = self._wait_for_joint_target(
+                joint,
+                plan
+            )
+
+        else:
+            final_raw = None
+
 
         return {
             "joint_key": joint_key,
@@ -792,6 +1157,55 @@ class Robot:
             "velocity_deg_s": plan["velocity_deg_s"],
             "goal_raw": plan["goal_raw"],
             "final_raw": final_raw,
+            "torque_enabled_by_command": (
+                torque_enabled_by_command
+            )
+        }
+
+    def move_joints(
+        self,
+        targets,
+        velocity_deg_s=None
+    ):
+
+        preview = self.preview_multi_joint_move(
+            targets,
+            velocity_deg_s
+        )
+
+        joint_plans = preview[
+            "joint_plans"
+        ]
+
+        self._set_multi_joint_profile_velocity(
+            joint_plans
+        )
+
+        torque_enabled_by_command = (
+            self._prepare_multi_joint_torque(
+                joint_plans
+            )
+        )
+
+        goals = self._collect_multi_joint_goals(
+            joint_plans
+        )
+
+        self._write_multi_joint_goals(
+            goals
+        )
+
+        final_positions = (
+            self._wait_for_multi_joint_targets(
+                joint_plans
+            )
+        )
+
+        return {
+            "targets": dict(targets),
+            "velocity_deg_s": preview["velocity_deg_s"],
+            "goal_raw": goals,
+            "final_raw": final_positions,
             "torque_enabled_by_command": (
                 torque_enabled_by_command
             )

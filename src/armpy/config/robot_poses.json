@@ -1,0 +1,48 @@
+{
+    "schema_version": 1,
+    "robot_name": "ARMPy_6R",
+    "poses": {
+        "home": {
+            "joint1": 0.0,
+            "joint2": 0.0,
+            "joint3": 0.0,
+            "joint4": 0.0,
+            "joint5": 0.0
+        },
+        "right": {
+            "joint1": -40.0,
+            "joint2": 57.964,
+            "joint3": -58.096,
+            "joint4": -95.098,
+            "joint5": -86.836
+        },
+        "left": {
+            "joint1": 100.0,
+            "joint2": 75.19,
+            "joint3": -52.998,
+            "joint4": 82.705,
+            "joint5": 1.23
+        },
+        "up": {
+            "joint1": 0.0,
+            "joint2": 29.443,
+            "joint3": -146.777,
+            "joint4": -9.492,
+            "joint5": -176.484
+        },
+        "down": {
+            "joint1": 181.67,
+            "joint2": 125.508,
+            "joint3": -146.865,
+            "joint4": -4.57,
+            "joint5": -192.041
+        },
+        "l_shape": {
+            "joint1": 99.932,
+            "joint2": 79.805,
+            "joint3": -51.504,
+            "joint4": 78.75,
+            "joint5": 0.0
+        }
+    }
+}
