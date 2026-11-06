@@ -41,6 +41,8 @@ class KeyboardJogController:
         print("E/D → Joint3 +/-")
         print("R/F → Joint4 +/-")
         print("T/G → Joint5 +/-")
+        print("O   → Open Gripper")
+        print("C   → Close Gripper")
         print("H   → HOME")
         print("X   → Exit")
 
@@ -83,6 +85,23 @@ class KeyboardJogController:
                         )
 
                         self.jog_controller.reset_targets()
+
+                        continue
+
+                    if key == "o":
+
+                        self.jog_controller.robot.open_gripper(
+                            wait=False
+                        )
+
+                        continue
+
+
+                    if key == "c":
+
+                        self.jog_controller.robot.close_gripper(
+                            wait=False
+                        )
 
                         continue
 

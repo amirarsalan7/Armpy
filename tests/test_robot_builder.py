@@ -9,6 +9,7 @@ from armpy.hardware.dynamixel_motor import DynamixelMotor
 from armpy.hardware.hardware_inventory import HardwareInventory
 from armpy.robot.joint import Joint
 from armpy.robot.robot_builder import RobotBuilder
+from armpy.robot.gripper import Gripper
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -175,31 +176,45 @@ class TestRobotBuilder(unittest.TestCase):
 
     def test_gripper_motor(self):
 
-        gripper = self.components["gripper"]
+        gripper = self.components[
+            "gripper"
+        ]
 
         self.assertEqual(
-            gripper["motor"].motor_id,
+            gripper.motor.motor_id,
             7
         )
 
         self.assertIs(
-            gripper["motor"],
-            self.components["motors"]["7"]
+            gripper.motor,
+            self.components[
+                "motors"
+            ]["7"]
         )
 
 
     def test_gripper_calibration(self):
 
-        gripper = self.components["gripper"]
+        gripper = self.components[
+            "gripper"
+        ]
 
         self.assertTrue(
-            gripper["calibration"]["reference"]["calibrated"]
+            gripper.calibration[
+                "reference"
+            ][
+                "calibrated"
+            ]
         )
 
-        self.assertTrue(
-            gripper["calibration"]["open_close"]["calibrated"]
-        )
+    def test_gripper_object_type(self):
 
+        self.assertIsInstance(
+            self.components[
+                "gripper"
+            ],
+            Gripper
+        )
 
     def test_invalid_robot_name_is_rejected(self):
 

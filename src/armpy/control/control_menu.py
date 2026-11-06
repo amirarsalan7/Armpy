@@ -78,6 +78,10 @@ class RobotControlMenu:
             )
 
             print(
+                "6. Gripper Control"
+            )
+
+            print(
                 "0. Exit"
             )
 
@@ -101,6 +105,9 @@ class RobotControlMenu:
 
                 elif choice == "5":
                     self.settings_menu()
+
+                elif choice == "6":
+                    self.gripper_menu()
 
                 elif choice == "0":
 
@@ -135,7 +142,7 @@ class RobotControlMenu:
             )
 
             print(
-                "1. Move One Joint"
+                "1. Move One Joint / Gripper"
             )
 
             print(
@@ -151,7 +158,15 @@ class RobotControlMenu:
             )
 
             print(
-                "5. Show Joint Limits"
+                "5. Show Joint / Gripper Limits"
+            )
+
+            print(
+                "6. Gripper Control"
+            )
+
+            print(
+                "7. Save Current Position"
             )
 
             print(
@@ -162,27 +177,54 @@ class RobotControlMenu:
                 "Select: "
             ).strip()
 
-            if choice == "1":
-                self.move_one_joint()
+            try:
 
-            elif choice == "2":
-                self.move_multiple_joints()
+                if choice == "1":
 
-            elif choice == "3":
-                self.move_home()
+                    self.move_one_joint()
 
-            elif choice == "4":
-                self.hold_joint()
+                elif choice == "2":
 
-            elif choice == "5":
-                self.show_joint_limits()
+                    self.move_multiple_joints()
 
-            elif choice == "0":
-                return
+                elif choice == "3":
 
-            else:
+                    self.move_home()
+
+                elif choice == "4":
+
+                    self.hold_joint()
+
+                elif choice == "5":
+
+                    self.show_joint_limits()
+
+                elif choice == "6":
+
+                    self.gripper_menu()
+
+                elif choice == "7":
+
+                    self.save_current_pose()
+
+                elif choice == "0":
+
+                    return
+
+                else:
+
+                    print(
+                        "Invalid option."
+                    )
+
+            except (
+                RuntimeError,
+                ValueError,
+                TimeoutError
+            ) as error:
+
                 print(
-                    "Invalid option."
+                    f"\nMotion error: {error}"
                 )
 
     def pose_menu(self):
@@ -272,6 +314,10 @@ class RobotControlMenu:
             )
 
             print(
+                "4. Gripper Jog"
+            )
+
+            print(
                 "0. Back"
             )
 
@@ -287,6 +333,9 @@ class RobotControlMenu:
 
             elif choice == "3":
                 self.joystick_controller.run()
+
+            elif choice == "4":
+                self.jog_gripper()
 
             elif choice == "0":
                 return
@@ -346,6 +395,73 @@ class RobotControlMenu:
                     "Invalid option."
                 )
 
+    def gripper_menu(self):
+
+        while True:
+
+            print(
+                "\n--- Gripper Control ---"
+            )
+
+            print(
+                "1. Read Gripper State"
+            )
+
+            print(
+                "2. Open Gripper"
+            )
+
+            print(
+                "3. Close Gripper"
+            )
+
+            print(
+                "4. Set Opening Percentage"
+            )
+
+            print(
+                "5. Hold Gripper"
+            )
+
+            print(
+                "6. Set Gripper Velocity"
+            )
+
+            print(
+                "0. Back"
+            )
+
+            choice = input(
+                "Select: "
+            ).strip()
+
+            if choice == "1":
+                self.show_gripper_state()
+
+            elif choice == "2":
+                self.open_gripper()
+
+            elif choice == "3":
+                self.close_gripper()
+
+            elif choice == "4":
+                self.set_gripper_opening()
+
+            elif choice == "5":
+                self.hold_gripper()
+
+            elif choice == "6":
+                self.set_gripper_velocity()
+
+            elif choice == "0":
+                return
+
+            else:
+
+                print(
+                    "Invalid option."
+                )
+
     def _choose_joint(self):
 
         joint_keys = self.robot.get_joint_names()
@@ -386,6 +502,110 @@ class RobotControlMenu:
             raise ValueError(
                 "Invalid joint selection."
             )
+
+    def _choose_joint_or_gripper(self):
+
+        joint_keys = (
+            self.robot
+            .get_joint_names()
+        )
+
+        print(
+            "\nSelect Motion Target:"
+        )
+
+        for index, joint_key in enumerate(
+            joint_keys,
+            start=1
+        ):
+
+            joint = (
+                self.robot
+                .get_joint(
+                    joint_key
+                )
+            )
+
+            suffix = ""
+
+            if len(joint.motors) > 1:
+
+                suffix = (
+                    " [synchronized]"
+                )
+
+            print(
+                f"{index}. "
+                f"{joint_key} - "
+                f"{joint.name}"
+                f"{suffix}"
+            )
+
+        gripper_index = (
+            len(joint_keys)
+            + 1
+        )
+
+        print(
+            f"{gripper_index}. "
+            "gripper - end effector"
+        )
+
+        print(
+            "0. Back"
+        )
+
+        choice = input(
+            "Select: "
+        ).strip()
+
+        if choice == "0":
+
+            return None, None
+
+        try:
+
+            selected_index = int(
+                choice
+            )
+
+        except ValueError:
+
+            raise ValueError(
+                "Invalid motion target selection."
+            )
+
+        if (
+            selected_index
+            == gripper_index
+        ):
+
+            return (
+                "gripper",
+                "gripper"
+            )
+
+        joint_index = (
+            selected_index
+            - 1
+        )
+
+        if not (
+            0
+            <= joint_index
+            < len(joint_keys)
+        ):
+
+            raise ValueError(
+                "Invalid motion target selection."
+            )
+
+        return (
+            "joint",
+            joint_keys[
+                joint_index
+            ]
+        )
 
     def _choose_pose(
         self,
@@ -452,7 +672,40 @@ class RobotControlMenu:
             raise ValueError(
                 "Invalid pose selection."
             )
-    
+
+    def _confirm(
+        self,
+        message
+    ):
+
+        while True:
+
+            answer = input(
+                f"{message} "
+                "[Enter=yes / n=no]: "
+            ).strip().lower()
+
+            if answer in (
+                "",
+                "y",
+                "yes"
+            ):
+
+                return True
+
+            if answer in (
+                "n",
+                "no"
+            ):
+
+                return False
+
+            print(
+                "Invalid confirmation. "
+                "Press Enter for Yes "
+                "or type n for No."
+            )
+
     def show_robot_state(self):
 
         state = self.robot.read_state()
@@ -474,241 +727,798 @@ class RobotControlMenu:
             state["gripper"]["raw_position"]
         )
 
+    def show_gripper_state(self):
+
+        state = (
+            self.robot
+            .read_gripper_state()
+        )
+
+        print(
+            "\nGripper State"
+        )
+
+        print(
+            f"Motor ID: "
+            f"{state['motor_id']}"
+        )
+
+        print(
+            f"Raw Position: "
+            f"{state['raw_position']}"
+        )
+
+        print(
+            f"Torque: "
+            f"{state['torque_enabled']}"
+        )
+
+        print(
+            f"Calibrated: "
+            f"{state['motion_calibrated']}"
+        )
+
+        if (
+            state[
+                "opening_percent"
+            ]
+            is not None
+        ):
+
+            print(
+                f"Opening: "
+                f"{state['opening_percent']:.1f}%"
+            )
+
+            print(
+                f"Open Raw: "
+                f"{state['open_raw']}"
+            )
+
+            print(
+                f"Closed Raw: "
+                f"{state['closed_raw']}"
+            )
+
+        else:
+
+            print(
+                "Opening: unavailable "
+                "(gripper is not calibrated)"
+            )
+
+        print(
+            f"Velocity: "
+            f"{state['velocity_rpm']:.2f} RPM"
+        )
+
+    def open_gripper(self):
+
+        if not self._confirm(
+            "Open Gripper?"
+        ):
+
+            print(
+                "Open Gripper cancelled."
+            )
+
+            return
+
+        result = (
+            self.robot
+            .open_gripper()
+        )
+
+        print(
+            "Gripper opened."
+        )
+
+        print(
+            f"Final raw: "
+            f"{result['final_raw']}"
+        )
+
+    def close_gripper(self):
+
+        if not self._confirm(
+            "Close Gripper?"
+        ):
+
+            print(
+                "Close Gripper cancelled."
+            )
+
+            return
+
+        result = (
+            self.robot
+            .close_gripper()
+        )
+
+        print(
+            "Gripper closed."
+        )
+
+        print(
+            f"Final raw: "
+            f"{result['final_raw']}"
+        )
+
+    def set_gripper_opening(self):
+
+        current_state = (
+            self.robot
+            .read_gripper_state()
+        )
+
+        if (
+            current_state[
+                "opening_percent"
+            ]
+            is not None
+        ):
+
+            print(
+                f"\nCurrent opening: "
+                f"{current_state['opening_percent']:.1f}%"
+            )
+
+        opening_percent = float(
+            input(
+                "Target opening [0-100 %]: "
+            )
+        )
+
+        goal_raw = (
+            self.robot
+            .gripper
+            .calculate_goal_raw(
+                opening_percent
+            )
+        )
+
+        print(
+            f"Goal raw: {goal_raw}"
+        )
+
+        if not self._confirm(
+            "Execute Gripper motion?"
+        ):
+
+            print(
+                "Gripper motion cancelled."
+            )
+
+            return
+
+        result = (
+            self.robot
+            .set_gripper_opening(
+                opening_percent
+            )
+        )
+
+        print(
+            f"Gripper opening set to "
+            f"{opening_percent:.1f}%."
+        )
+
+        print(
+            f"Final raw: "
+            f"{result['final_raw']}"
+        )
+
+    def hold_gripper(self):
+
+        raw_position = (
+            self.robot
+            .hold_gripper()
+        )
+
+        print(
+            f"Gripper holding at "
+            f"raw {raw_position}."
+        )
+
+    def set_gripper_velocity(self):
+
+        current = (
+            self.robot
+            .gripper
+            .default_velocity_rpm
+        )
+
+        print(
+            f"\nCurrent Gripper velocity: "
+            f"{current:.2f} RPM"
+        )
+
+        velocity_rpm = float(
+            input(
+                "New Gripper velocity [RPM]: "
+            )
+        )
+
+        updated = (
+            self.robot
+            .set_default_gripper_velocity(
+                velocity_rpm
+            )
+        )
+
+        print(
+            f"Gripper velocity set to "
+            f"{updated:.2f} RPM."
+        )
+
     def show_joint_limits(self):
 
-        for joint_key in self.robot.get_joint_names():
+        print(
+            "\n--- Joint / Gripper Limits ---"
+        )
 
-            joint = self.robot.get_joint(
-                joint_key
+        for joint_key in (
+            self.robot
+            .get_joint_names()
+        ):
+
+            joint = (
+                self.robot
+                .get_joint(
+                    joint_key
+                )
             )
 
             print(
                 f"{joint_key}: "
                 f"{joint.min_angle_deg:.2f} "
-                f"to {joint.max_angle_deg:.2f} deg"
+                f"to "
+                f"{joint.max_angle_deg:.2f} deg"
             )
+
+        print(
+            "\nGripper:"
+        )
+
+        state = (
+            self.robot
+            .read_gripper_state()
+        )
+
+        if not state[
+            "motion_calibrated"
+        ]:
+
+            print(
+                "gripper: NOT CALIBRATED"
+            )
+
+            print(
+                "Opening limits unavailable."
+            )
+
+            return
+
+        print(
+            "gripper: "
+            "0.00 to 100.00 %"
+        )
+
+        print(
+            "  0.00%   = Fully Closed"
+        )
+
+        print(
+            "  100.00% = Fully Open"
+        )
+
+        print(
+            f"  Closed raw: "
+            f"{state['closed_raw']}"
+        )
+
+        print(
+            f"  Open raw:   "
+            f"{state['open_raw']}"
+        )
 
     def move_one_joint(self):
 
-        joint_key = self._choose_joint()
+        while True:
 
-        if joint_key is None:
-            return
+            target_type, target_key = (
+                self._choose_joint_or_gripper()
+            )
 
-        joint = self.robot.get_joint(
-            joint_key
+            if target_type is None:
+
+                return
+
+            try:
+
+                if target_type == "gripper":
+
+                    self._move_gripper_as_single_target()
+
+                    continue
+
+                joint_key = target_key
+
+                joint = (
+                    self.robot
+                    .get_joint(
+                        joint_key
+                    )
+                )
+
+                current_angle = (
+                    self.robot
+                    .read_joint_angle(
+                        joint_key
+                    )
+                )
+
+                print(
+                    f"\nCurrent angle: "
+                    f"{current_angle:.2f} deg"
+                )
+
+                print(
+                    f"Safe limits: "
+                    f"{joint.min_angle_deg:.2f} "
+                    f"to "
+                    f"{joint.max_angle_deg:.2f} deg"
+                )
+
+                target_angle = float(
+                    input(
+                        "Target angle [deg]: "
+                    )
+                )
+
+                velocity_text = input(
+                    f"Velocity [deg/s] "
+                    f"[Enter = "
+                    f"{self.default_velocity_deg_s:.2f}]: "
+                ).strip()
+
+                if velocity_text:
+
+                    velocity_deg_s = float(
+                        velocity_text
+                    )
+
+                else:
+
+                    velocity_deg_s = (
+                        self.default_velocity_deg_s
+                    )
+
+                plan = (
+                    self.robot
+                    .preview_joint_move(
+                        joint_key,
+                        target_angle,
+                        velocity_deg_s
+                    )
+                )
+
+                print(
+                    "\nMotion Plan"
+                )
+
+                print(
+                    f"Target: {joint_key}"
+                )
+
+                print(
+                    f"Current: "
+                    f"{plan['current_angle_deg']:.2f} deg"
+                )
+
+                print(
+                    f"Target: "
+                    f"{plan['target_angle_deg']:.2f} deg"
+                )
+
+                print(
+                    f"Move: "
+                    f"{plan['movement_deg']:.2f} deg"
+                )
+
+                print(
+                    f"Velocity: "
+                    f"{plan['velocity_deg_s']:.2f} deg/s"
+                )
+
+                print(
+                    f"Raw current: "
+                    f"{plan['current_raw']}"
+                )
+
+                print(
+                    f"Raw goals: "
+                    f"{plan['goal_raw']}"
+                )
+
+                if not self._confirm(
+                    "Execute this motion?"
+                ):
+
+                    print(
+                        "Motion cancelled."
+                    )
+
+                    continue
+
+                result = (
+                    self.robot
+                    .move_joint(
+                        joint_key,
+                        target_angle,
+                        velocity_deg_s
+                    )
+                )
+
+                print(
+                    f"{joint_key} reached target."
+                )
+
+                print(
+                    f"Final raw: "
+                    f"{result['final_raw']}"
+                )
+
+            except (
+                RuntimeError,
+                ValueError,
+                TimeoutError
+            ) as error:
+
+                print(
+                    f"\nMotion error: {error}"
+                )
+
+            finally:
+
+                self._flush_pending_input()
+
+    def move_multiple_joints(self):
+
+        while True:
+
+            command = input(
+                "\nPress Enter for a new "
+                "Multi-Joint motion, "
+                "or B to go back: "
+            ).strip().lower()
+
+            if command == "b":
+                return
+
+            targets = {}
+
+            print(
+                "\nEnter target angle "
+                "or press Enter to skip."
+            )
+
+            for joint_key in (
+                self.robot
+                .get_joint_names()
+            ):
+
+                current = (
+                    self.robot
+                    .read_joint_angle(
+                        joint_key
+                    )
+                )
+
+                value = input(
+                    f"{joint_key} "
+                    f"[current "
+                    f"{current:.2f} deg]: "
+                ).strip()
+
+                if not value:
+                    continue
+
+                targets[
+                    joint_key
+                ] = float(
+                    value
+                )
+
+            gripper_text = input(
+                "Gripper opening "
+                "[0-100 %, Enter = skip]: "
+            ).strip()
+
+            gripper_target = None
+
+            if gripper_text:
+
+                gripper_target = float(
+                    gripper_text
+                )
+
+                self.robot.gripper.calculate_goal_raw(
+                    gripper_target
+                )
+
+            if (
+                not targets
+                and gripper_target is None
+            ):
+
+                print(
+                    "No targets selected."
+                )
+
+                continue
+
+            if targets:
+
+                preview = (
+                    self.robot
+                    .preview_multi_joint_move(
+                        targets,
+                        self.default_velocity_deg_s
+                    )
+                )
+
+                print(
+                    "\nMulti-Joint Motion Plan"
+                )
+
+                for (
+                    joint_key,
+                    plan
+                ) in (
+                    preview[
+                        "joint_plans"
+                    ].items()
+                ):
+
+                    print(
+                        f"{joint_key}: "
+                        f"{plan['current_angle_deg']:.2f} "
+                        f"→ "
+                        f"{plan['target_angle_deg']:.2f} deg"
+                    )
+
+            if gripper_target is not None:
+
+                print(
+                    f"Gripper → "
+                    f"{gripper_target:.1f}%"
+                )
+
+            if not self._confirm(
+                "Execute this multi-joint motion?"
+            ):
+
+                print(
+                    "Multi-joint motion cancelled."
+                )
+
+                continue
+
+            try:
+
+                if targets:
+
+                    self.robot.move_joints(
+                        targets,
+                        self.default_velocity_deg_s
+                    )
+
+                if gripper_target is not None:
+
+                    self.robot.set_gripper_opening(
+                        gripper_target
+                    )
+
+                print(
+                    "Motion completed."
+                )
+
+            finally:
+
+                self._flush_pending_input()
+
+    def move_named_pose(self):
+
+        while True:
+
+            pose_name = (
+                self._choose_pose(
+                    allow_home=True
+                )
+            )
+
+            if pose_name is None:
+                return
+
+            print(
+                f"\nSelected pose: "
+                f"{pose_name}"
+            )
+
+            print(
+                f"Velocity: "
+                f"{self.default_velocity_deg_s:.2f} deg/s"
+            )
+
+            if not self._confirm(
+                f"Execute pose '{pose_name}'?"
+            ):
+
+                print(
+                    "Pose motion cancelled."
+                )
+
+                continue
+
+            try:
+
+                self.pose_controller.move_pose(
+                    pose_name,
+                    self.default_velocity_deg_s
+                )
+
+                print(
+                    f"Pose '{pose_name}' completed."
+                )
+
+            except (
+                RuntimeError,
+                ValueError,
+                TimeoutError
+            ) as error:
+
+                print(
+                    f"\nPose error: {error}"
+                )
+
+            finally:
+
+                self._flush_pending_input()
+
+    def _move_gripper_as_single_target(
+        self
+    ):
+
+        state = (
+            self.robot
+            .read_gripper_state()
         )
 
+        if not state[
+            "motion_calibrated"
+        ]:
 
-        current_angle = self.robot.read_joint_angle(
-            joint_key
+            raise RuntimeError(
+                "Gripper is not calibrated. "
+                "Calibrate open and closed "
+                "positions first."
+            )
+
+        current_percent = (
+            state[
+                "opening_percent"
+            ]
         )
 
         print(
-            f"\nCurrent angle: {current_angle:.2f} deg"
+            "\nGripper Motion"
         )
 
         print(
-            f"Safe limits: "
-            f"{joint.min_angle_deg:.2f} "
-            f"to {joint.max_angle_deg:.2f} deg"
+            f"Current opening: "
+            f"{current_percent:.2f}%"
         )
 
-        target_angle = float(
-            input("Target angle [deg]: ")
+        print(
+            "Safe limits: "
+            "0.00% to 100.00%"
+        )
+
+        print(
+            f"Closed raw: "
+            f"{state['closed_raw']}"
+        )
+
+        print(
+            f"Open raw: "
+            f"{state['open_raw']}"
+        )
+
+        target_percent = float(
+            input(
+                "Target opening [%]: "
+            )
+        )
+
+        goal_raw = (
+            self.robot
+            .gripper
+            .calculate_goal_raw(
+                target_percent
+            )
         )
 
         velocity_text = input(
-            f"Velocity [deg/s] "
-            f"[Enter = {self.default_velocity_deg_s:.2f}]: "
+            f"Velocity [RPM] "
+            f"[Enter = "
+            f"{self.robot.gripper.default_velocity_rpm:.2f}]: "
         ).strip()
 
         if velocity_text:
 
-            velocity_deg_s = float(
+            velocity_rpm = float(
                 velocity_text
             )
 
         else:
 
-            velocity_deg_s = (
-                self.default_velocity_deg_s
+            velocity_rpm = (
+                self.robot
+                .gripper
+                .default_velocity_rpm
             )
 
-        plan = self.robot.preview_joint_move(
-            joint_key,
-            target_angle,
-            velocity_deg_s
-        )
-
-        print("\nMotion Plan")
-
         print(
-            f"Current:  "
-            f"{plan['current_angle_deg']:.2f} deg"
+            "\nGripper Motion Plan"
         )
 
         print(
-            f"Target:   "
-            f"{plan['target_angle_deg']:.2f} deg"
+            f"Current: "
+            f"{current_percent:.2f}%"
         )
 
         print(
-            f"Move:     "
-            f"{plan['movement_deg']:.2f} deg"
+            f"Target: "
+            f"{target_percent:.2f}%"
+        )
+
+        print(
+            f"Goal raw: "
+            f"{goal_raw}"
         )
 
         print(
             f"Velocity: "
-            f"{plan['velocity_deg_s']:.2f} deg/s"
+            f"{velocity_rpm:.2f} RPM"
         )
 
-        print(
-            f"Raw current: {plan['current_raw']}"
-        )
-
-        print(
-            f"Raw goals:   {plan['goal_raw']}"
-        )
-
-        answer = input(
-            "Execute this motion? [y/n]: "
-        ).strip().lower()
-
-        if answer != "y":
-            print("Motion cancelled.")
-            return
-
-        try:
-
-            result = self.robot.move_joint(
-                joint_key,
-                target_angle,
-                velocity_deg_s
-            )
+        if not self._confirm(
+            "Execute this Gripper motion?"
+        ):
 
             print(
-                f"{joint_key} reached target. "
-                f"Final raw: {result['final_raw']}"
-            )
-
-        finally:
-
-            self._flush_pending_input()
-
-    def move_multiple_joints(self):
-
-        targets = {}
-
-        print(
-            "\nEnter target angle or press Enter to skip."
-        )
-
-        for joint_key in self.robot.get_joint_names():
-
-            current = self.robot.read_joint_angle(
-                joint_key
-            )
-
-            value = input(
-                f"{joint_key} "
-                f"[current {current:.2f} deg]: "
-            ).strip()
-
-            if not value:
-                continue
-
-            targets[joint_key] = float(
-                value
-            )
-
-        if not targets:
-            print("No targets selected.")
-            return
-
-        preview = (
-            self.robot.preview_multi_joint_move(
-                targets,
-                self.default_velocity_deg_s
-            )
-        )
-
-        print("\nMulti-Joint Motion Plan")
-
-        for joint_key, plan in preview["joint_plans"].items():
-
-            print(
-                f"{joint_key}: "
-                f"{plan['current_angle_deg']:.2f} "
-                f"→ {plan['target_angle_deg']:.2f} deg"
-            )
-
-        answer = input(
-            "Execute? [y/n]: "
-        ).strip().lower()
-
-        if answer != "y":
-            return
-
-        try:
-
-            self.robot.move_joints(
-                targets,
-                self.default_velocity_deg_s
-            )
-
-            print(
-                "Multi-joint motion completed."
-            )
-
-        finally:
-
-            self._flush_pending_input()
-
-    def move_named_pose(self):
-
-        pose_name = self._choose_pose(
-            allow_home=True
-        )
-
-        if pose_name is None:
-            return
-
-        print(
-            f"\nSelected pose: {pose_name}"
-        )
-
-        print(
-            f"Velocity: "
-            f"{self.default_velocity_deg_s:.2f} deg/s"
-        )
-
-        answer = input(
-            "Execute this pose? [y/n]: "
-        ).strip().lower()
-
-        if answer != "y":
-
-            print(
-                "Pose motion cancelled."
+                "Gripper motion cancelled."
             )
 
             return
 
-        try:
-
-            self.pose_controller.move_pose(
-                pose_name,
-                self.default_velocity_deg_s
+        result = (
+            self.robot
+            .set_gripper_opening(
+                target_percent,
+                velocity_rpm=velocity_rpm
             )
+        )
 
-            print(
-                f"Pose '{pose_name}' completed."
-            )
+        print(
+            "Gripper reached target."
+        )
 
-        finally:
-
-            self._flush_pending_input()
+        print(
+            f"Final raw: "
+            f"{result['final_raw']}"
+        )
 
     def hold_joint(self):
 
@@ -793,11 +1603,9 @@ class RobotControlMenu:
             f"{self.default_velocity_deg_s:.2f} deg/s"
         )
 
-        answer = input(
-            "Move robot to HOME? [y/n]: "
-        ).strip().lower()
-
-        if answer != "y":
+        if not self._confirm(
+            "Move robot to HOME?"
+        ):
 
             print(
                 "HOME motion cancelled."
@@ -856,6 +1664,121 @@ class RobotControlMenu:
             self.default_velocity_deg_s
         )    
 
+    def jog_gripper(self):
+
+        default_step_percent = 5.0
+
+        while True:
+
+            state = (
+                self.robot
+                .read_gripper_state()
+            )
+
+            current = (
+                state[
+                    "opening_percent"
+                ]
+            )
+
+            if current is None:
+
+                raise RuntimeError(
+                    "Gripper must be calibrated "
+                    "before Jog control."
+                )
+
+            print(
+                f"\nCurrent Gripper opening: "
+                f"{current:.1f}%"
+            )
+
+            print(
+                "O = Open more"
+            )
+
+            print(
+                "C = Close more"
+            )
+
+            print(
+                "0 = Back"
+            )
+
+            command = input(
+                "Command: "
+            ).strip().lower()
+
+            if command == "0":
+                return
+
+            if command not in (
+                "o",
+                "c"
+            ):
+
+                print(
+                    "Invalid command."
+                )
+
+                continue
+
+            step_text = input(
+                f"Step [%] "
+                f"[Enter = "
+                f"{default_step_percent:.1f}]: "
+            ).strip()
+
+            if step_text:
+
+                step_percent = float(
+                    step_text
+                )
+
+            else:
+
+                step_percent = (
+                    default_step_percent
+                )
+
+            if step_percent <= 0:
+
+                raise ValueError(
+                    "Gripper Jog step must "
+                    "be greater than zero."
+                )
+
+            if command == "o":
+
+                target = (
+                    current
+                    + step_percent
+                )
+
+            else:
+
+                target = (
+                    current
+                    - step_percent
+                )
+
+            target = max(
+                0.0,
+                min(
+                    100.0,
+                    target
+                )
+            )
+
+            self.robot.set_gripper_opening(
+                target
+            )
+
+            print(
+                f"Gripper → "
+                f"{target:.1f}%"
+            )
+
     def save_current_pose(self):
 
         print(
@@ -907,15 +1830,14 @@ class RobotControlMenu:
                     f"- {warning}"
                 )
 
-        answer = input(
-            f"\nSave as '{pose_name}'? "
-            "[y/n]: "
-        ).strip().lower()
+        if not self._confirm(
+            f"Save current position as '{pose_name}'?"
+        ):
 
-        if answer != "y":
             print(
                 "Pose was not saved."
             )
+
             return
 
         try:
@@ -934,12 +1856,14 @@ class RobotControlMenu:
             if "already exists" not in str(error):
                 raise
 
-            overwrite = input(
-                "Pose already exists. "
-                "Overwrite? [y/n]: "
-            ).strip().lower()
+            if not self._confirm(
+                "Pose already exists. Overwrite?"
+            ):
 
-            if overwrite != "y":
+                print(
+                    "Existing pose was not changed."
+                )
+
                 return
 
             saved = (
@@ -1015,15 +1939,17 @@ class RobotControlMenu:
 
             if choice == "1":
 
-                answer = input(
-                    "Replace complete pose? "
-                    "[y/n]: "
-                ).strip().lower()
-
-                if answer == "y":
+                if self._confirm(
+                    "Replace complete pose "
+                    "with current robot position?"
+                ):
 
                     self.pose_controller.update_pose_from_current(
                         pose_name
+                    )
+
+                    print(
+                        "Pose updated."
                     )
 
                     print(
@@ -1103,12 +2029,14 @@ class RobotControlMenu:
         if pose_name is None:
             return
 
-        answer = input(
-            f"Delete pose '{pose_name}'? "
-            "[y/n]: "
-        ).strip().lower()
+        if not self._confirm(
+            f"Delete pose '{pose_name}'?"
+        ):
 
-        if answer != "y":
+            print(
+                "Delete cancelled."
+            )
+
             return
 
         self.pose_controller.delete_pose(

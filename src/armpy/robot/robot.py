@@ -1,4 +1,5 @@
 import time
+from armpy.robot.gripper import Gripper
 
 class Robot:
 
@@ -39,62 +40,102 @@ class Robot:
 
     def _validate_components(self):
 
-        if not isinstance(self.name, str) or not self.name:
+        if not isinstance(
+            self.name,
+            str
+        ) or not self.name:
+
             raise ValueError(
-                "Robot name must be a non-empty string."
+                "Robot name must be "
+                "a non-empty string."
             )
 
         if not self.motors:
+
             raise ValueError(
-                f"{self.name} must contain motors."
+                f"{self.name} must "
+                "contain motors."
             )
 
         if not self.joints:
+
             raise ValueError(
-                f"{self.name} must contain joints."
+                f"{self.name} must "
+                "contain joints."
             )
 
-        for joint_key, joint in self.joints.items():
+        for joint_key, joint in (
+            self.joints.items()
+        ):
 
-            for motor_id, motor in joint.motors.items():
+            for motor_id, motor in (
+                joint.motors.items()
+            ):
 
                 if motor_id not in self.motors:
+
                     raise ValueError(
-                        f"{joint_key}: Motor {motor_id} "
-                        "does not exist in Robot motors."
+                        f"{joint_key}: "
+                        f"Motor {motor_id} "
+                        "does not exist in "
+                        "Robot motors."
                     )
 
-                if self.motors[motor_id] is not motor:
+                if (
+                    self.motors[
+                        motor_id
+                    ]
+                    is not motor
+                ):
+
                     raise ValueError(
-                        f"{joint_key}: Motor {motor_id} "
-                        "object does not match Robot motor object."
+                        f"{joint_key}: "
+                        f"Motor {motor_id} "
+                        "object does not match "
+                        "Robot motor object."
                     )
 
-        if not isinstance(self.gripper, dict):
+        if not isinstance(
+            self.gripper,
+            Gripper
+        ):
+
             raise ValueError(
-                "Gripper components are invalid."
+                "Robot gripper must be "
+                "a Gripper object."
             )
 
-        gripper_motor = self.gripper.get("motor")
-
-        if gripper_motor is None:
-            raise ValueError(
-                "Gripper motor is missing."
-            )
+        gripper_motor = (
+            self.gripper.motor
+        )
 
         gripper_motor_id = str(
             gripper_motor.motor_id
         )
 
-        if gripper_motor_id not in self.motors:
+        if (
+            gripper_motor_id
+            not in self.motors
+        ):
+
             raise ValueError(
-                f"Gripper Motor {gripper_motor_id} "
-                "does not exist in Robot motors."
+                f"Gripper Motor "
+                f"{gripper_motor_id} "
+                "does not exist in "
+                "Robot motors."
             )
 
-        if self.motors[gripper_motor_id] is not gripper_motor:
+        if (
+            self.motors[
+                gripper_motor_id
+            ]
+            is not gripper_motor
+        ):
+
             raise ValueError(
-                "Gripper motor object does not match Robot motor object."
+                "Gripper motor object "
+                "does not match Robot "
+                "motor object."
             )
 
         return True
@@ -292,17 +333,82 @@ class Robot:
 
     def read_gripper_raw_position(self):
 
-        motor = self.gripper["motor"]
+        return (
+            self.gripper
+            .read_raw_position()
+        )
+    
 
-        position = motor.read_present_position_raw()
+    def read_gripper_state(self):
 
-        if position is None:
-            raise RuntimeError(
-                "Could not read gripper position."
+        return (
+            self.gripper
+            .read_state()
+        )
+
+
+    def open_gripper(
+        self,
+        velocity_rpm=None,
+        wait=True
+    ):
+
+        return (
+            self.gripper.open(
+                velocity_rpm=velocity_rpm,
+                wait=wait
             )
+        )
 
-        return position
 
+    def close_gripper(
+        self,
+        velocity_rpm=None,
+        wait=True
+    ):
+
+        return (
+            self.gripper.close(
+                velocity_rpm=velocity_rpm,
+                wait=wait
+            )
+        )
+
+
+    def set_gripper_opening(
+        self,
+        opening_percent,
+        velocity_rpm=None,
+        wait=True
+    ):
+
+        return (
+            self.gripper.set_opening(
+                opening_percent,
+                velocity_rpm=velocity_rpm,
+                wait=wait
+            )
+        )
+
+
+    def hold_gripper(self):
+
+        return (
+            self.gripper.hold()
+        )
+
+
+    def set_default_gripper_velocity(
+        self,
+        velocity_rpm
+    ):
+
+        return (
+            self.gripper
+            .set_default_velocity_rpm(
+                velocity_rpm
+            )
+        )
 
     def read_state(self):
 
@@ -326,9 +432,9 @@ class Robot:
         return {
             "robot_name": self.name,
             "joints": joint_states,
-            "gripper": {
-                "raw_position": self.read_gripper_raw_position()
-            }
+            "gripper": (
+                self.read_gripper_state()
+            )
         }
 
     def _preflight_motor_for_goal(self, motor, goal_raw):

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from armpy.robot.joint import Joint
 from armpy.robot.robot import Robot
+from armpy.robot.gripper import Gripper
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +16,8 @@ CALIBRATION_FILE = PROJECT_ROOT / "data" / "joint_calibration.json"
 
 class FakeMotor:
 
+    TORQUE_ON = 1
+
     def __init__(self, motor_id, position_raw):
 
         self.motor_id = motor_id
@@ -24,6 +27,10 @@ class FakeMotor:
     def read_present_position_raw(self):
 
         return self.position_raw
+
+    def read_torque_enabled(self):
+
+        return self.TORQUE_ON
 
 
 class TestRobot(unittest.TestCase):
@@ -85,11 +92,19 @@ class TestRobot(unittest.TestCase):
 
         gripper_config = self.robot_config["gripper"]
 
-        self.gripper = {
-            "motor": self.motors[str(gripper_config["motor_id"])],
-            "config": gripper_config,
-            "calibration": self.calibration["gripper"]
-        }
+        self.gripper = Gripper(
+            motor=self.motors[
+                str(
+                    gripper_config[
+                        "motor_id"
+                    ]
+                )
+            ],
+            config=gripper_config,
+            calibration=self.calibration[
+                "gripper"
+            ]
+        )
 
         self.robot = Robot(
             name=self.robot_config["robot_name"],

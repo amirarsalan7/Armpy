@@ -406,66 +406,66 @@ class PoseLibrary:
 
         return removed
 
-def get_limit_warnings(
-    self,
-    targets,
-    margin_deg=3.0
-):
-
-    warnings = []
-
-    for joint_key, angle_deg in (
-        targets.items()
+    def get_limit_warnings(
+        self,
+        targets,
+        margin_deg=3.0
     ):
 
-        joint = self.robot.get_joint(
-            joint_key
-        )
+        warnings = []
 
-        angle_deg = float(
-            angle_deg
-        )
+        for joint_key, angle_deg in (
+            targets.items()
+        ):
 
-        negative_distance = (
-            angle_deg
-            - joint.min_angle_deg
-        )
-
-        positive_distance = (
-            joint.max_angle_deg
-            - angle_deg
-        )
-
-        if negative_distance < 0:
-
-            warnings.append(
-                f"{joint_key} is "
-                f"{abs(negative_distance):.2f} deg "
-                "beyond its negative limit."
+            joint = self.robot.get_joint(
+                joint_key
             )
 
-        elif negative_distance <= margin_deg:
-
-            warnings.append(
-                f"{joint_key} is only "
-                f"{negative_distance:.2f} deg "
-                "from its negative limit."
+            angle_deg = float(
+                angle_deg
             )
 
-        if positive_distance < 0:
-
-            warnings.append(
-                f"{joint_key} is "
-                f"{abs(positive_distance):.2f} deg "
-                "beyond its positive limit."
+            negative_distance = (
+                angle_deg
+                - joint.min_angle_deg
             )
 
-        elif positive_distance <= margin_deg:
-
-            warnings.append(
-                f"{joint_key} is only "
-                f"{positive_distance:.2f} deg "
-                "from its positive limit."
+            positive_distance = (
+                joint.max_angle_deg
+                - angle_deg
             )
 
-    return warnings
+            if negative_distance < 0:
+
+                warnings.append(
+                    f"{joint_key} is "
+                    f"{abs(negative_distance):.2f} deg "
+                    "beyond its negative limit."
+                )
+
+            elif negative_distance <= margin_deg:
+
+                warnings.append(
+                    f"{joint_key} is only "
+                    f"{negative_distance:.2f} deg "
+                    "from its negative limit."
+                )
+
+            if positive_distance < 0:
+
+                warnings.append(
+                    f"{joint_key} is "
+                    f"{abs(positive_distance):.2f} deg "
+                    "beyond its positive limit."
+                )
+
+            elif positive_distance <= margin_deg:
+
+                warnings.append(
+                    f"{joint_key} is only "
+                    f"{positive_distance:.2f} deg "
+                    "from its positive limit."
+                )
+
+        return warnings

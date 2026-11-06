@@ -1,5 +1,6 @@
 from armpy.hardware.dynamixel_motor import DynamixelMotor
 from armpy.robot.joint import Joint
+from armpy.robot.gripper import Gripper
 
 
 class RobotBuilder:
@@ -12,7 +13,6 @@ class RobotBuilder:
         self.calibration_data = calibration_data
 
         self._validate_sources()
-
 
     def _validate_sources(self):
 
@@ -169,16 +169,34 @@ class RobotBuilder:
 
     def _build_gripper(self, motors):
 
-        gripper_config = self.robot_config.get_gripper_config()
-        gripper_calibration = self.calibration_data["gripper"]
+        gripper_config = (
+            self.robot_config
+            .get_gripper_config()
+        )
 
-        motor_id = gripper_config["motor_id"]
+        gripper_calibration = (
+            self.calibration_data[
+                "gripper"
+            ]
+        )
 
-        return {
-            "motor": motors[str(motor_id)],
-            "config": gripper_config,
-            "calibration": gripper_calibration
-        }
+        motor_id = str(
+            gripper_config[
+                "motor_id"
+            ]
+        )
+
+        if motor_id not in motors:
+            raise ValueError(
+                f"Gripper motor {motor_id} "
+                "does not exist in motor objects."
+            )
+
+        return Gripper(
+            motor=motors[motor_id],
+            config=gripper_config,
+            calibration=gripper_calibration
+        )
 
 
     def build(self):

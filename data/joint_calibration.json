@@ -233,8 +233,8 @@
         },
         "open_close": {
             "calibrated": true,
-            "open_raw": 2441,
-            "close_raw": 2028
+            "open_raw": 2553,
+            "closed_raw": 2044
         }
     }
 }
