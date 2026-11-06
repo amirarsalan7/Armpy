@@ -24,6 +24,24 @@ class Robot:
     MIN_MOTION_TIMEOUT_S = 5.0
     MAX_COUPLED_ANGLE_ERROR_DEG = 3.0
 
+    MOTION_MODE_SYNCHRONIZED = "synchronized"
+
+    MOTION_MODE_COORDINATED_ARRIVAL = "coordinated_arrival"
+
+    MOTION_MODE_SEQUENTIAL_FORWARD = "sequential_forward"
+
+    MOTION_MODE_SEQUENTIAL_REVERSE = "sequential_reverse"
+
+    MOTION_MODE_CUSTOM = "custom"
+
+    SUPPORTED_MOTION_MODES = {
+        MOTION_MODE_SYNCHRONIZED,
+        MOTION_MODE_COORDINATED_ARRIVAL,
+        MOTION_MODE_SEQUENTIAL_FORWARD,
+        MOTION_MODE_SEQUENTIAL_REVERSE,
+        MOTION_MODE_CUSTOM,
+    }
+
     def __init__(self, name, motors, joints, gripper):
 
         self.name = name
@@ -149,6 +167,327 @@ class Robot:
             )
 
         return self.joints[joint_key]
+
+    def _validate_motion_mode(
+        self,
+        motion_mode
+    ):
+
+        if not isinstance(
+            motion_mode,
+            str
+        ):
+
+            raise TypeError(
+                "Motion mode must be a string."
+            )
+
+        if (
+            motion_mode
+            not in self.SUPPORTED_MOTION_MODES
+        ):
+
+            raise ValueError(
+                f"Unsupported motion mode: "
+                f"{motion_mode}. "
+                f"Supported modes: "
+                f"{sorted(self.SUPPORTED_MOTION_MODES)}"
+            )
+
+        return True
+
+    def _resolve_motion_order(
+        self,
+        targets,
+        motion_mode,
+        joint_order=None
+    ):
+
+        self._validate_motion_mode(
+            motion_mode
+        )
+
+        robot_order = (
+            self.get_joint_names()
+        )
+
+        target_keys = set(
+            targets
+        )
+
+        if (
+            motion_mode
+            != self.MOTION_MODE_CUSTOM
+            and joint_order is not None
+        ):
+
+            raise ValueError(
+                "joint_order can only be used "
+                "with custom motion mode."
+            )
+
+        if motion_mode in (
+            self.MOTION_MODE_SYNCHRONIZED,
+            self.MOTION_MODE_COORDINATED_ARRIVAL
+        ):
+
+            return [
+                joint_key
+                for joint_key in robot_order
+                if joint_key in target_keys
+            ]
+
+        if (
+            motion_mode
+            == self.MOTION_MODE_SEQUENTIAL_FORWARD
+        ):
+
+            return [
+                joint_key
+                for joint_key in robot_order
+                if joint_key in target_keys
+            ]
+
+        if (
+            motion_mode
+            == self.MOTION_MODE_SEQUENTIAL_REVERSE
+        ):
+
+            return [
+                joint_key
+                for joint_key in reversed(
+                    robot_order
+                )
+                if joint_key in target_keys
+            ]
+
+        if not isinstance(
+            joint_order,
+            (list, tuple)
+        ):
+
+            raise ValueError(
+                "Custom motion requires "
+                "joint_order as a list or tuple."
+            )
+
+        if not joint_order:
+
+            raise ValueError(
+                "Custom joint order "
+                "cannot be empty."
+            )
+
+        joint_order = list(
+            joint_order
+        )
+
+        if (
+            len(joint_order)
+            != len(set(joint_order))
+        ):
+
+            raise ValueError(
+                "Custom joint order "
+                "contains duplicate joints."
+            )
+
+        invalid_joints = (
+            set(joint_order)
+            - set(robot_order)
+        )
+
+        if invalid_joints:
+
+            raise ValueError(
+                f"Custom joint order contains "
+                f"unknown joints: "
+                f"{sorted(invalid_joints)}."
+            )
+
+        missing_targets = (
+            target_keys
+            - set(joint_order)
+        )
+
+        extra_joints = (
+            set(joint_order)
+            - target_keys
+        )
+
+        if missing_targets:
+
+            raise ValueError(
+                f"Custom joint order is missing "
+                f"target joints: "
+                f"{sorted(missing_targets)}."
+            )
+
+        if extra_joints:
+
+            raise ValueError(
+                f"Custom joint order contains "
+                f"joints without targets: "
+                f"{sorted(extra_joints)}."
+            )
+
+        return joint_order
+
+    def _calculate_coordinated_joint_velocity(
+        self,
+        movement_deg,
+        max_movement_deg,
+        max_velocity_deg_s
+    ):
+
+        self._validate_joint_velocity(
+            max_velocity_deg_s
+        )
+
+        distance = abs(
+            float(
+                movement_deg
+            )
+        )
+
+        max_distance = abs(
+            float(
+                max_movement_deg
+            )
+        )
+
+        if (
+            max_distance == 0.0
+            or distance == 0.0
+        ):
+
+            return float(
+                max_velocity_deg_s
+            )
+
+        velocity_deg_s = (
+            max_velocity_deg_s
+            * distance
+            / max_distance
+        )
+
+        velocity_deg_s = max(
+            self.MIN_JOINT_VELOCITY_DEG_S,
+            velocity_deg_s
+        )
+
+        velocity_deg_s = min(
+            max_velocity_deg_s,
+            velocity_deg_s
+        )
+
+        self._validate_joint_velocity(
+            velocity_deg_s
+        )
+
+        return float(
+            velocity_deg_s
+        )
+
+    def _apply_coordinated_arrival(
+        self,
+        joint_plans,
+        max_velocity_deg_s
+    ):
+
+        if not joint_plans:
+
+            raise ValueError(
+                "Joint plans cannot be empty."
+            )
+
+        max_movement_deg = max(
+            abs(
+                plan[
+                    "movement_deg"
+                ]
+            )
+            for plan
+            in joint_plans.values()
+        )
+
+        if max_movement_deg == 0:
+
+            coordinated_duration_s = 0.0
+
+        else:
+
+            coordinated_duration_s = (
+                max_movement_deg
+                / max_velocity_deg_s
+            )
+
+        updated_plans = {}
+
+        for joint_key, plan in (
+            joint_plans.items()
+        ):
+
+            velocity_deg_s = (
+                self
+                ._calculate_coordinated_joint_velocity(
+                    movement_deg=(
+                        plan[
+                            "movement_deg"
+                        ]
+                    ),
+                    max_movement_deg=(
+                        max_movement_deg
+                    ),
+                    max_velocity_deg_s=(
+                        max_velocity_deg_s
+                    )
+                )
+            )
+
+            updated_plan = dict(
+                plan
+            )
+
+            updated_plan[
+                "velocity_deg_s"
+            ] = velocity_deg_s
+
+            joint = (
+                self.get_joint(
+                    joint_key
+                )
+            )
+
+            profile_velocities = {}
+
+            for motor_id, motor in (
+                joint.motors.items()
+            ):
+
+                profile_velocities[
+                    motor_id
+                ] = (
+                    self
+                    ._calculate_profile_velocity_raw(
+                        joint,
+                        motor,
+                        velocity_deg_s
+                    )
+                )
+
+            updated_plan[
+                "profile_velocity_raw"
+            ] = profile_velocities
+
+            updated_plans[
+                joint_key
+            ] = updated_plan
+
+        return (
+            updated_plans,
+            coordinated_duration_s
+        )
 
     def _get_joint_position_tolerance(
         self,
@@ -346,6 +685,74 @@ class Robot:
             .read_state()
         )
 
+    def read_joint_alignment_status(
+        self,
+        joint_key
+    ):
+
+        joint = (
+            self.get_joint(
+                joint_key
+            )
+        )
+
+        raw_positions = (
+            self.read_joint_raw_positions(
+                joint_key
+            )
+        )
+
+        motor_angles = {}
+
+        for (
+            motor_id,
+            raw_position
+        ) in raw_positions.items():
+
+            motor_angles[
+                motor_id
+            ] = (
+                joint
+                .motor_raw_to_joint_angle(
+                    motor_id,
+                    raw_position
+                )
+            )
+
+        if len(
+            motor_angles
+        ) <= 1:
+
+            alignment_error_deg = 0.0
+
+        else:
+
+            values = list(
+                motor_angles.values()
+            )
+
+            alignment_error_deg = (
+                max(values)
+                - min(values)
+            )
+
+        return {
+            "joint_key": joint_key,
+            "raw_positions": raw_positions,
+            "motor_angles_deg": (
+                motor_angles
+            ),
+            "alignment_error_deg": (
+                alignment_error_deg
+            ),
+            "max_allowed_error_deg": (
+                self.MAX_COUPLED_ANGLE_ERROR_DEG
+            ),
+            "within_tolerance": (
+                alignment_error_deg
+                <= self.MAX_COUPLED_ANGLE_ERROR_DEG
+            )
+        }
 
     def open_gripper(
         self,
@@ -594,36 +1001,72 @@ class Robot:
     def preview_multi_joint_move(
         self,
         targets,
-        velocity_deg_s=None
+        velocity_deg_s=None,
+        motion_mode="synchronized",
+        joint_order=None
     ):
 
-        if not isinstance(targets, dict) or not targets:
+        if (
+            not isinstance(
+                targets,
+                dict
+            )
+            or not targets
+        ):
+
             raise ValueError(
-                "Multi-joint targets must be a non-empty dictionary."
+                "Multi-joint targets must be "
+                "a non-empty dictionary."
             )
 
         if velocity_deg_s is None:
+
             velocity_deg_s = (
-                self.default_joint_velocity_deg_s
+                self
+                .default_joint_velocity_deg_s
             )
+
+        velocity_deg_s = float(
+            velocity_deg_s
+        )
 
         self._validate_joint_velocity(
             velocity_deg_s
         )
 
+        self._validate_motion_mode(
+            motion_mode
+        )
+
+        execution_order = (
+            self._resolve_motion_order(
+                targets=targets,
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
+        )
+
         joint_plans = {}
+
         used_motor_ids = set()
 
-        for joint_key, target_angle_deg in targets.items():
+        for (
+            joint_key,
+            target_angle_deg
+        ) in targets.items():
 
-            plan = self.preview_joint_move(
-                joint_key,
-                target_angle_deg,
-                velocity_deg_s
+            plan = (
+                self.preview_joint_move(
+                    joint_key,
+                    target_angle_deg,
+                    velocity_deg_s
+                )
             )
 
             motor_ids = set(
-                plan["goal_raw"]
+                plan[
+                    "goal_raw"
+                ]
             )
 
             duplicated = (
@@ -632,8 +1075,10 @@ class Robot:
             )
 
             if duplicated:
+
                 raise RuntimeError(
-                    f"Motors are used by multiple target joints: "
+                    "Motors are used by "
+                    "multiple target joints: "
                     f"{sorted(duplicated)}."
                 )
 
@@ -641,12 +1086,46 @@ class Robot:
                 motor_ids
             )
 
-            joint_plans[joint_key] = plan
+            joint_plans[
+                joint_key
+            ] = plan
+
+        coordinated_duration_s = None
+
+        if (
+            motion_mode
+            == self.MOTION_MODE_COORDINATED_ARRIVAL
+        ):
+
+            (
+                joint_plans,
+                coordinated_duration_s
+            ) = (
+                self._apply_coordinated_arrival(
+                    joint_plans,
+                    velocity_deg_s
+                )
+            )
 
         return {
-            "targets": dict(targets),
-            "velocity_deg_s": velocity_deg_s,
-            "joint_plans": joint_plans
+            "targets": dict(
+                targets
+            ),
+            "velocity_deg_s": (
+                velocity_deg_s
+            ),
+            "motion_mode": (
+                motion_mode
+            ),
+            "execution_order": (
+                execution_order
+            ),
+            "coordinated_duration_s": (
+                coordinated_duration_s
+            ),
+            "joint_plans": (
+                joint_plans
+            )
         }
 
     def _collect_multi_joint_goals(self, joint_plans):
@@ -1271,47 +1750,153 @@ class Robot:
     def move_joints(
         self,
         targets,
-        velocity_deg_s=None
+        velocity_deg_s=None,
+        motion_mode="synchronized",
+        joint_order=None
     ):
 
-        preview = self.preview_multi_joint_move(
-            targets,
-            velocity_deg_s
+        preview = (
+            self.preview_multi_joint_move(
+                targets=targets,
+                velocity_deg_s=velocity_deg_s,
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
         )
 
-        joint_plans = preview[
-            "joint_plans"
-        ]
-
-        self._set_multi_joint_profile_velocity(
-            joint_plans
+        joint_plans = (
+            preview[
+                "joint_plans"
+            ]
         )
 
-        torque_enabled_by_command = (
-            self._prepare_multi_joint_torque(
+        execution_order = (
+            preview[
+                "execution_order"
+            ]
+        )
+
+        goals = (
+            self._collect_multi_joint_goals(
                 joint_plans
             )
         )
 
-        goals = self._collect_multi_joint_goals(
-            joint_plans
-        )
+        joint_velocities = {
+            joint_key: (
+                plan[
+                    "velocity_deg_s"
+                ]
+            )
+            for joint_key, plan
+            in joint_plans.items()
+        }
 
-        self._write_multi_joint_goals(
-            goals
-        )
+        if motion_mode in (
+            self.MOTION_MODE_SYNCHRONIZED,
+            self.MOTION_MODE_COORDINATED_ARRIVAL
+        ):
 
-        final_positions = (
-            self._wait_for_multi_joint_targets(
+            self._set_multi_joint_profile_velocity(
                 joint_plans
             )
-        )
+
+            torque_enabled_by_command = (
+                self
+                ._prepare_multi_joint_torque(
+                    joint_plans
+                )
+            )
+
+            self._write_multi_joint_goals(
+                goals
+            )
+
+            final_positions = (
+                self
+                ._wait_for_multi_joint_targets(
+                    joint_plans
+                )
+            )
+
+        else:
+
+            torque_enabled_by_command = {}
+
+            final_positions = {}
+
+            for joint_key in (
+                execution_order
+            ):
+
+                plan = (
+                    joint_plans[
+                        joint_key
+                    ]
+                )
+
+                result = (
+                    self.move_joint(
+                        joint_key=joint_key,
+                        target_angle_deg=(
+                            plan[
+                                "target_angle_deg"
+                            ]
+                        ),
+                        velocity_deg_s=(
+                            plan[
+                                "velocity_deg_s"
+                            ]
+                        ),
+                        wait=True
+                    )
+                )
+
+                final_positions[
+                    joint_key
+                ] = (
+                    result[
+                        "final_raw"
+                    ]
+                )
+
+                torque_enabled_by_command[
+                    joint_key
+                ] = (
+                    result[
+                        "torque_enabled_by_command"
+                    ]
+                )
 
         return {
-            "targets": dict(targets),
-            "velocity_deg_s": preview["velocity_deg_s"],
-            "goal_raw": goals,
-            "final_raw": final_positions,
+            "targets": dict(
+                targets
+            ),
+            "velocity_deg_s": (
+                preview[
+                    "velocity_deg_s"
+                ]
+            ),
+            "joint_velocities_deg_s": (
+                joint_velocities
+            ),
+            "motion_mode": (
+                motion_mode
+            ),
+            "execution_order": (
+                execution_order
+            ),
+            "coordinated_duration_s": (
+                preview[
+                    "coordinated_duration_s"
+                ]
+            ),
+            "goal_raw": (
+                goals
+            ),
+            "final_raw": (
+                final_positions
+            ),
             "torque_enabled_by_command": (
                 torque_enabled_by_command
             )

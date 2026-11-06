@@ -16,33 +16,68 @@ class PoseController:
             self.pose_library.get_pose_names()
         )
 
-
-    def move_pose(
+    def preview_pose(
         self,
         pose_name,
-        velocity_deg_s=None
+        velocity_deg_s=None,
+        motion_mode="synchronized",
+        joint_order=None
     ):
 
         targets = (
-            self.pose_library.get_pose(
+            self.get_pose(
                 pose_name
             )
         )
 
-        return self.robot.move_joints(
-            targets,
-            velocity_deg_s
+        return (
+            self.robot
+            .preview_multi_joint_move(
+                targets=targets,
+                velocity_deg_s=velocity_deg_s,
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
         )
 
-    
-    def home(
+    def move_pose(
         self,
-        velocity_deg_s=None
+        pose_name,
+        velocity_deg_s=None,
+        motion_mode="synchronized",
+        joint_order=None
     ):
 
-        return self.move_pose(
-            "home",
-            velocity_deg_s
+        targets = (
+            self.get_pose(
+                pose_name
+            )
+        )
+
+        return (
+            self.robot
+            .move_joints(
+                targets=targets,
+                velocity_deg_s=velocity_deg_s,
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
+        )
+
+    def home(
+        self,
+        velocity_deg_s=None,
+        motion_mode="synchronized",
+        joint_order=None
+    ):
+
+        return (
+            self.move_pose(
+                pose_name="home",
+                velocity_deg_s=velocity_deg_s,
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
         )
 
     def save_current_pose(

@@ -673,6 +673,127 @@ class RobotControlMenu:
                 "Invalid pose selection."
             )
 
+    def _choose_motion_mode(
+        self,
+        targets
+    ):
+
+        print(
+            "\nSelect Motion Mode:"
+        )
+
+        print(
+            "1. Synchronized"
+        )
+
+        print(
+            "2. Coordinated Arrival"
+        )
+
+        print(
+            "3. Sequential Forward"
+        )
+
+        print(
+            "4. Sequential Reverse"
+        )
+
+        print(
+            "5. Custom Order"
+        )
+
+        print(
+            "0. Back"
+        )
+
+        choice = input(
+            "Select [Enter = 1]: "
+        ).strip()
+
+        if not choice:
+
+            choice = "1"
+
+        if choice == "0":
+
+            return None, None
+
+        if choice == "1":
+
+            return (
+                self.robot
+                .MOTION_MODE_SYNCHRONIZED,
+                None
+            )
+
+        if choice == "2":
+
+            return (
+                self.robot
+                .MOTION_MODE_COORDINATED_ARRIVAL,
+                None
+            )
+
+        if choice == "3":
+
+            return (
+                self.robot
+                .MOTION_MODE_SEQUENTIAL_FORWARD,
+                None
+            )
+
+        if choice == "4":
+
+            return (
+                self.robot
+                .MOTION_MODE_SEQUENTIAL_REVERSE,
+                None
+            )
+
+        if choice != "5":
+
+            raise ValueError(
+                "Invalid motion mode."
+            )
+
+        print(
+            "\nTarget joints:"
+        )
+
+        print(
+            ", ".join(
+                targets.keys()
+            )
+        )
+
+        order_text = input(
+            "Custom order "
+            "[example: joint3,joint2,joint1]: "
+        ).strip()
+
+        if not order_text:
+
+            raise ValueError(
+                "Custom order cannot be empty."
+            )
+
+        joint_order = [
+            item.strip()
+            for item
+            in (
+                order_text
+                .replace(" ", ",")
+                .split(",")
+            )
+            if item.strip()
+        ]
+
+        return (
+            self.robot
+            .MOTION_MODE_CUSTOM,
+            joint_order
+        )
+
     def _confirm(
         self,
         message
@@ -791,6 +912,74 @@ class RobotControlMenu:
             f"Velocity: "
             f"{state['velocity_rpm']:.2f} RPM"
         )
+
+    def _show_multi_joint_preview(
+        self,
+        preview
+    ):
+
+        print(
+            "\nMulti-Joint Motion Plan"
+        )
+
+        print(
+            f"Mode: "
+            f"{preview['motion_mode']}"
+        )
+
+        if preview[
+            "motion_mode"
+        ] in (
+            self.robot
+            .MOTION_MODE_SEQUENTIAL_FORWARD,
+            self.robot
+            .MOTION_MODE_SEQUENTIAL_REVERSE,
+            self.robot
+            .MOTION_MODE_CUSTOM
+        ):
+
+            print(
+                "Execution order: "
+                + " -> ".join(
+                    preview[
+                        "execution_order"
+                    ]
+                )
+            )
+
+        if (
+            preview[
+                "coordinated_duration_s"
+            ]
+            is not None
+        ):
+
+            print(
+                f"Estimated coordinated duration: "
+                f"{preview['coordinated_duration_s']:.2f} s"
+            )
+
+        print()
+
+        for (
+            joint_key,
+            plan
+        ) in (
+            preview[
+                "joint_plans"
+            ].items()
+        ):
+
+            print(
+                f"{joint_key}: "
+                f"{plan['current_angle_deg']:.2f} "
+                f"-> "
+                f"{plan['target_angle_deg']:.2f} deg "
+                f"| move "
+                f"{plan['movement_deg']:.2f} deg "
+                f"| velocity "
+                f"{plan['velocity_deg_s']:.2f} deg/s"
+            )
 
     def open_gripper(self):
 
@@ -1183,14 +1372,16 @@ class RobotControlMenu:
 
                 self._flush_pending_input()
 
-    def move_multiple_joints(self):
+    def move_multiple_joints(
+        self
+    ):
 
         while True:
 
             command = input(
                 "\nPress Enter for a new "
                 "Multi-Joint motion, "
-                "or B to go back: "
+                "or b to go back: "
             ).strip().lower()
 
             if command == "b":
@@ -1243,8 +1434,12 @@ class RobotControlMenu:
                     gripper_text
                 )
 
-                self.robot.gripper.calculate_goal_raw(
-                    gripper_target
+                (
+                    self.robot
+                    .gripper
+                    .calculate_goal_raw(
+                        gripper_target
+                    )
                 )
 
             if (
@@ -1258,49 +1453,63 @@ class RobotControlMenu:
 
                 continue
 
+            motion_mode = None
+            joint_order = None
+            preview = None
+
             if targets:
+
+                (
+                    motion_mode,
+                    joint_order
+                ) = (
+                    self._choose_motion_mode(
+                        targets
+                    )
+                )
+
+                if motion_mode is None:
+
+                    continue
 
                 preview = (
                     self.robot
                     .preview_multi_joint_move(
-                        targets,
-                        self.default_velocity_deg_s
+                        targets=targets,
+                        velocity_deg_s=(
+                            self
+                            .default_velocity_deg_s
+                        ),
+                        motion_mode=motion_mode,
+                        joint_order=joint_order
                     )
                 )
 
-                print(
-                    "\nMulti-Joint Motion Plan"
+                self._show_multi_joint_preview(
+                    preview
                 )
 
-                for (
-                    joint_key,
-                    plan
-                ) in (
-                    preview[
-                        "joint_plans"
-                    ].items()
-                ):
-
-                    print(
-                        f"{joint_key}: "
-                        f"{plan['current_angle_deg']:.2f} "
-                        f"→ "
-                        f"{plan['target_angle_deg']:.2f} deg"
-                    )
-
-            if gripper_target is not None:
-
-                print(
-                    f"Gripper → "
-                    f"{gripper_target:.1f}%"
-                )
-
-            if not self._confirm(
-                "Execute this multi-joint motion?"
+            if (
+                gripper_target
+                is not None
             ):
 
                 print(
-                    "Multi-joint motion cancelled."
+                    f"\nGripper target: "
+                    f"{gripper_target:.1f}%"
+                )
+
+                print(
+                    "Gripper will execute "
+                    "after the arm motion."
+                )
+
+            if not self._confirm(
+                "Execute this motion?"
+            ):
+
+                print(
+                    "Motion cancelled."
                 )
 
                 continue
@@ -1309,26 +1518,52 @@ class RobotControlMenu:
 
                 if targets:
 
-                    self.robot.move_joints(
-                        targets,
-                        self.default_velocity_deg_s
+                    result = (
+                        self.robot
+                        .move_joints(
+                            targets=targets,
+                            velocity_deg_s=(
+                                self
+                                .default_velocity_deg_s
+                            ),
+                            motion_mode=(
+                                motion_mode
+                            ),
+                            joint_order=(
+                                joint_order
+                            )
+                        )
                     )
 
-                if gripper_target is not None:
+                    print(
+                        "Arm motion completed."
+                    )
+
+                    print(
+                        f"Mode: "
+                        f"{result['motion_mode']}"
+                    )
+
+                if (
+                    gripper_target
+                    is not None
+                ):
 
                     self.robot.set_gripper_opening(
                         gripper_target
                     )
 
-                print(
-                    "Motion completed."
-                )
+                    print(
+                        "Gripper motion completed."
+                    )
 
             finally:
 
                 self._flush_pending_input()
 
-    def move_named_pose(self):
+    def move_named_pose(
+        self
+    ):
 
         while True:
 
@@ -1339,16 +1574,53 @@ class RobotControlMenu:
             )
 
             if pose_name is None:
+
                 return
+
+            targets = (
+                self.pose_controller
+                .get_pose(
+                    pose_name
+                )
+            )
+
+            (
+                motion_mode,
+                joint_order
+            ) = (
+                self._choose_motion_mode(
+                    targets
+                )
+            )
+
+            if motion_mode is None:
+
+                continue
+
+            preview = (
+                self.pose_controller
+                .preview_pose(
+                    pose_name=pose_name,
+                    velocity_deg_s=(
+                        self
+                        .default_velocity_deg_s
+                    ),
+                    motion_mode=(
+                        motion_mode
+                    ),
+                    joint_order=(
+                        joint_order
+                    )
+                )
+            )
 
             print(
                 f"\nSelected pose: "
                 f"{pose_name}"
             )
 
-            print(
-                f"Velocity: "
-                f"{self.default_velocity_deg_s:.2f} deg/s"
+            self._show_multi_joint_preview(
+                preview
             )
 
             if not self._confirm(
@@ -1364,22 +1636,22 @@ class RobotControlMenu:
             try:
 
                 self.pose_controller.move_pose(
-                    pose_name,
-                    self.default_velocity_deg_s
+                    pose_name=pose_name,
+                    velocity_deg_s=(
+                        self
+                        .default_velocity_deg_s
+                    ),
+                    motion_mode=(
+                        motion_mode
+                    ),
+                    joint_order=(
+                        joint_order
+                    )
                 )
 
                 print(
-                    f"Pose '{pose_name}' completed."
-                )
-
-            except (
-                RuntimeError,
-                ValueError,
-                TimeoutError
-            ) as error:
-
-                print(
-                    f"\nPose error: {error}"
+                    f"Pose '{pose_name}' "
+                    "completed."
                 )
 
             finally:
@@ -1591,16 +1863,49 @@ class RobotControlMenu:
             f"{step_deg:.2f} deg."
         )
 
-    def move_home(self):
+    def move_home(
+        self
+    ):
 
         print(
             "\nHOME will move all joints "
             "to calibrated zero."
         )
 
-        print(
-            f"Velocity: "
-            f"{self.default_velocity_deg_s:.2f} deg/s"
+        targets = (
+            self.pose_controller
+            .get_pose(
+                "home"
+            )
+        )
+
+        (
+            motion_mode,
+            joint_order
+        ) = (
+            self._choose_motion_mode(
+                targets
+            )
+        )
+
+        if motion_mode is None:
+
+            return
+
+        preview = (
+            self.pose_controller
+            .preview_pose(
+                pose_name="home",
+                velocity_deg_s=(
+                    self.default_velocity_deg_s
+                ),
+                motion_mode=motion_mode,
+                joint_order=joint_order
+            )
+        )
+
+        self._show_multi_joint_preview(
+            preview
         )
 
         if not self._confirm(
@@ -1616,7 +1921,11 @@ class RobotControlMenu:
         try:
 
             self.pose_controller.home(
-                self.default_velocity_deg_s
+                velocity_deg_s=(
+                    self.default_velocity_deg_s
+                ),
+                motion_mode=motion_mode,
+                joint_order=joint_order
             )
 
             print(

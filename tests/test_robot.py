@@ -361,6 +361,158 @@ class TestRobot(unittest.TestCase):
                         Joint.POSITION_COUNTS_PER_REV
                     )
 
+    def test_sequential_forward_order(
+        self
+    ):
+
+        targets = {
+            "joint3": 0.0,
+            "joint1": 0.0
+        }
+
+        order = (
+            self.robot
+            ._resolve_motion_order(
+                targets,
+                self.robot
+                .MOTION_MODE_SEQUENTIAL_FORWARD
+            )
+        )
+
+        self.assertEqual(
+            order,
+            [
+                "joint1",
+                "joint3"
+            ]
+        )
+
+
+    def test_sequential_reverse_order(
+        self
+    ):
+
+        targets = {
+            "joint1": 0.0,
+            "joint3": 0.0
+        }
+
+        order = (
+            self.robot
+            ._resolve_motion_order(
+                targets,
+                self.robot
+                .MOTION_MODE_SEQUENTIAL_REVERSE
+            )
+        )
+
+        self.assertEqual(
+            order,
+            [
+                "joint3",
+                "joint1"
+            ]
+        )
+
+
+    def test_custom_motion_order(
+        self
+    ):
+
+        targets = {
+            "joint1": 0.0,
+            "joint3": 0.0
+        }
+
+        order = (
+            self.robot
+            ._resolve_motion_order(
+                targets,
+                self.robot
+                .MOTION_MODE_CUSTOM,
+                [
+                    "joint3",
+                    "joint1"
+                ]
+            )
+        )
+
+        self.assertEqual(
+            order,
+            [
+                "joint3",
+                "joint1"
+            ]
+        )
+
+
+    def test_custom_order_rejects_duplicates(
+        self
+    ):
+
+        with self.assertRaises(
+            ValueError
+        ):
+
+            (
+                self.robot
+                ._resolve_motion_order(
+                    {
+                        "joint1": 0.0,
+                        "joint3": 0.0
+                    },
+                    self.robot
+                    .MOTION_MODE_CUSTOM,
+                    [
+                        "joint1",
+                        "joint1"
+                    ]
+                )
+            )
+
+
+    def test_custom_order_requires_all_targets(
+        self
+    ):
+
+        with self.assertRaises(
+            ValueError
+        ):
+
+            (
+                self.robot
+                ._resolve_motion_order(
+                    {
+                        "joint1": 0.0,
+                        "joint3": 0.0
+                    },
+                    self.robot
+                    .MOTION_MODE_CUSTOM,
+                    [
+                        "joint1"
+                    ]
+                )
+            )
+
+
+    def test_coordinated_velocity_scaling(
+        self
+    ):
+
+        velocity = (
+            self.robot
+            ._calculate_coordinated_joint_velocity(
+                movement_deg=40.0,
+                max_movement_deg=80.0,
+                max_velocity_deg_s=40.0
+            )
+        )
+
+        self.assertAlmostEqual(
+            velocity,
+            20.0
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

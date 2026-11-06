@@ -32,14 +32,14 @@
         },
         "down": {
             "joint1": 181.67,
-            "joint2": 125.508,
+            "joint2": 120.0,
             "joint3": -146.865,
             "joint4": -4.57,
             "joint5": -192.041
         },
         "l_shape": {
             "joint1": 99.932,
-            "joint2": 79.805,
+            "joint2": 0.0,
             "joint3": -51.504,
             "joint4": 78.75,
             "joint5": 0.0
